@@ -94,7 +94,9 @@ def compile_data(ticker, interval):
 
 
 def update_ticker_data(ticker):
-    '''compiles data for all intervals for certain pairs'''
+    '''compiles data for all intervals for a pair'''
+
+    # makes request for every interval
     for interval in HISTORY_LIMIT.keys():
         print(f'Compiling {interval} data for {ticker}.')
         compile_data(ticker, interval)
