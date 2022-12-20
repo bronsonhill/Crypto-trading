@@ -10,25 +10,29 @@ def import_data(file_name):
 
 
 def averaged_price(df):
-    '''mutates df to have column of averaged open, high, low and close'''
+    '''mutates df to have column of averaged open, high, low and close
+    called "price"'''
 
     average_price = []
-
+    # averages ohlc for each row and adds it to list
     rows = df.itertuples()
     for row in rows:
         sum_price = float(row[1]) + float(row[2]) + float(row[3]) + float(row[4])
         average_price.append(sum_price/4)
     
+    # adds column with list
     df['Price'] = average_price
     return df
 
 
-def add_sma(df, length):
+def sma_data(df, length):
     '''from price df adds a column of SMA with specified length'''
+    
+    # determines if Price column must be added
     if 'Price' in df.columns:
         None
     else:
         averaged_price(df)
 
-    # df[f'{length}SMA_PRICE_INDICATOR'] = df['Price'].rolling(length).mean()
+    # returns moving average
     return df['Price'].rolling(length).mean()

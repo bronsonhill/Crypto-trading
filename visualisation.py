@@ -5,26 +5,26 @@ import mplfinance as mpf
 import data_processing
 
 
-def chart(ticker, interval):
+def chart(ticker, interval, sma):
     ''''''
     filename = f'Price_data/{ticker}/{interval}.csv'
     df = data_processing.import_data(filename)
     df.index = pd.to_datetime(df.index, utc=True)
-    indicator = data_processing.add_sma(df, length=4)
+    
+    # creatre sma plot
+    if sma:
+        sma_data = data_processing.sma_data(df, length=sma)
+        sma_plot = mpf.make_addplot(sma_data)
 
+    # prepares df for candle plot
     for name in df.columns:
-        # prepares df for candle plot
         if name not in ('Open', 'High', 'Low', 'Close'):
             df.drop([name], axis=1, inplace=True)
 
-
-    # Create the indicator plot
-    indicator_plot = mpf.make_addplot(indicator)
-
     # Create the candle plot
-    mpf.plot(df, type='candle', style='yahoo', addplot=indicator_plot)
+    mpf.plot(df, type='candle', style='yahoo', addplot=sma_plot)
 
 
-chart('EURUSD=X', '15m')
+chart('EURUSD=X', '15m', 5)
 
 
