@@ -3,6 +3,7 @@ import yfinance
 import pandas as pd
 import os
 
+
 HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 300}
 
@@ -50,12 +51,12 @@ def file_exists(dir):
 def compile_data(ticker, interval):
     '''adds requested data to price data folder as csv'''
     
-    # creates ticker folder if required
-    if not os.path.exists(f'Price_data/{ticker}.csv'):
-        os.makedirs(f'Price_data/{ticker}')
+    # save directory
+    dir = f'Price_data/{ticker}/{interval}.csv'
 
-    #dir = f'/Users/home/Library/Mobile Documents/com~apple~CloudDocs/Estate/Trading/Price_data/EURUSD=X.csv/{interval}.csv'
-    dir = f'Price_data/{ticker}.csv/{interval}.csv'
+    # creates ticker folder if required
+    if not os.path.exists(f'Price_data/{ticker}'):
+        os.makedirs(f'Price_data/{ticker}')
 
     # sets start date of request according to whether file exists or not
     exist_bool = file_exists(dir)
@@ -105,4 +106,4 @@ def update_ticker_data(ticker):
     return
 
 
-update_ticker_data('EURUSD=X')
+# update_ticker_data('EURUSD=X')
