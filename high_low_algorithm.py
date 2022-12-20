@@ -1,43 +1,22 @@
-import csv
+from data_processing import add_sma, averaged_price, import_data
+
 import pandas as pd
 
+df = add_sma(averaged_price(import_data('Price_data/EURUSD=X/15m.csv')), 4)
 
-def import_data(file_name, ma=4):
-    '''collects specified price data from database and returns df'''
-    
-    # imports csv to df
-    df = pd.read_csv(file_name)
-    df.drop(df.columns[[5, 6, 7, 8]], axis=1, inplace=True)
+def find_local_extrema(price_series):
+    ''''''
+    extrema = []
+    for i in range(1, len(price_series) - 1):
+        if price_series[i] > price_series[i-1] and price_series[i] > price_series[i+1]:
+            # local maximum found
+            extrema.append((i, price_series[i]))
+        elif price_series[i] < price_series[i-1] and price_series[i] < price_series[i+1]:
+            # local minimum found
+            extrema.append((i, price_series[i]))
+    return extrema
 
-    return df
-
-
-def averaged_price(df):
-    '''mutates df to have column of averaged open, high, low and close'''
-    average_price = []
-
-    rows = df.itertuples()
-    for row in rows:
-        sum_price = float(row[2]) + float(row[3]) + float(row[4]) + float(row[5])
-        average_price.append(sum_price/4)
-    
-    df['Price'] = average_price
-    return df
-
-
-def add_sma(df, length):
-    '''from price df adds a column of SMA with specified length'''
-    df[f'{length}SMA'] = df['Price'].rolling(length).mean()
-    return df
-
-
-# print(add_sma(import_data('Price_data/EURUSD=X/15m.csv', 4).loc[:,'Close'], 5))
-
-# print(import_data('Price_data/EURUSD=X/15m.csv', 4))
-
-print(add_sma(averaged_price(import_data('Price_data/EURUSD=X/15m.csv')), 4))
-
-
+print(find_local_extrema(df['4SMA']))
 
 def detect_trend(file_name, ma=4):
     '''from ohlc data, returns a list of booleans: True when uptrending
