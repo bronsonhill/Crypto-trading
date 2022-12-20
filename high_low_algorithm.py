@@ -3,14 +3,11 @@ import pandas as pd
 
 
 def import_data(file_name, ma=4):
-    '''collects specified price data from database and adds a column
-    with sma'''
+    '''collects specified price data from database and returns df'''
     
+    # imports csv to df
     df = pd.read_csv(file_name)
     df.drop(df.columns[[5, 6, 7, 8]], axis=1, inplace=True)
-
-    df.drop('Open', axis=1)
-    df.drop('Close', axis=1)
 
     return df
 
