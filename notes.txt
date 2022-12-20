@@ -1,7 +1,0 @@
-Fix time-date conversion bug
-Fix folder name bug
-Fix readability with comments
-
-Complete high-low algorthm
-
-
