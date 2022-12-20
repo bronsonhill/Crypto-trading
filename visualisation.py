@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import mplfinance as mpl 
+# https://github.com/matplotlib/mplfinance/blob/master/examples/addplot.ipynb
+import mplfinance as mpf
 import data_processing
 
 
@@ -15,21 +16,13 @@ def chart(ticker, interval):
         # prepares df for candle plot
         if name not in ('Open', 'High', 'Low', 'Close'):
             df.drop([name], axis=1, inplace=True)
-    
-    print(df)
 
-    # Create a new figure and set the title
-    fig = plt.figure()
-    fig.suptitle(ticker + ' ' + interval)
-
-    # Create the candle plot
-    mpl.plot(df, type='candle', style='yahoo')
 
     # Create the indicator plot
-    plt.plot(indicator)
+    indicator_plot = mpf.make_addplot(indicator)
 
-    # Display the plots
-    plt.show()
+    # Create the candle plot
+    mpf.plot(df, type='candle', style='yahoo', addplot=indicator_plot)
 
 
 chart('EURUSD=X', '15m')
