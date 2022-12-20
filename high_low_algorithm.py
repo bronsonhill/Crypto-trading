@@ -3,6 +3,8 @@ import pandas as pd
 
 
 def import_data(file_name, ma=0):
+    '''collects specified price data from database and adds the '''
+    
     df = pd.read_csv(file_name)
     df.drop(df.columns[[5, 6, 7, 8]], axis=1, inplace=True)
 
@@ -32,7 +34,17 @@ def import_data(file_name, ma=0):
     return df
 
 
-print(import_data('Price data/CL=F_15m.csv', 4))
+def add_sma(price_series, length):
+    '''from price series data adds '''
+    return price_series.rolling(length).mean()
+
+
+print(add_sma(import_data('Price_data/EURUSD=X/15m.csv', 4).loc[:,'Close'], 5))
+
+# print(import_data('Price_data/EURUSD=X/15m.csv', 4))
+
+
+
 
 
 def detect_trend(file_name, ma=4):

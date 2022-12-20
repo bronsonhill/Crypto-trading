@@ -23,9 +23,11 @@ def file_exists(dir):
     '''tests whether price data file already exists and returns last 
     price date if so, otherwise returns false'''
     
+    # tests file exists
     if os.path.exists(dir):
         file = pd.read_csv(dir)
 
+        # determines the required datetime format
         for elem in ['1d', '1wk', '1mo']:
             if elem in dir:
                 format_str = "%Y-%m-%d"
@@ -33,6 +35,7 @@ def file_exists(dir):
             else:
                 format_str = "%Y-%m-%d %H:%M:%S"
 
+        # gives last price time
         recent_date = datetime.datetime.strptime(
             file.iloc[1:2,0:1].values[0][0],format_str) \
             + datetime.timedelta(hours=16, minutes=1)
@@ -47,7 +50,7 @@ def file_exists(dir):
 def compile_data(ticker, interval):
     '''adds requested data to price data folder as csv'''
     
-    
+    # creates ticker folder if required
     if not os.path.exists(f'Price_data/{ticker}.csv'):
         os.makedirs(f'Price_data/{ticker}')
 
