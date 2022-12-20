@@ -25,6 +25,6 @@ def chart(ticker, interval, sma):
     mpf.plot(df, type='candle', style='yahoo', addplot=sma_plot)
 
 
-chart('EURUSD=X', '15m', 5)
+chart('EURUSD=X', '15m', 7)
 
 

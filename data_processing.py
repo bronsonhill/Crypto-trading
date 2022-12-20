@@ -1,11 +1,12 @@
 import pandas as pd
 
-def import_data(file_name):
+def import_data(file_name, data_points=200):
     '''collects specified price data from database and returns df'''
     
     # imports csv to df
     df = pd.read_csv(file_name, index_col=0, parse_dates=True)
     df.drop(df.columns[[4, 5, 6, 7]], axis=1, inplace=True)
+    df = df.iloc[len(df)-data_points:len(df)]
     return df
 
 
