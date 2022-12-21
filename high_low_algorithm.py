@@ -40,15 +40,17 @@ def price_extrema(df, extrema):
         trend_data = df.iloc[lower_index_bracket:upper_index_bracket]
         # records max price point if in up trend
         if up_trend:
-            price_extrema_data.append(max(trend_data['High']))
+            for row in trend_data.itertuples():
+                price_extrema_data.append((row[0], row[2]))
             up_trend = False
         # records min price point if in down trend
         else:
-            price_extrema_data.append(min(trend_data['Low']))
+            for row in trend_data.itertuples():
+                price_extrema_data.append((row[0], row[3]))
             up_trend = True
         lower_index_bracket = upper_index_bracket
 
-    print(price_extrema_data)
-    return price_extrema_data
+    df = pd.DataFrame(price_extrema_data, columns=['Datetime', 'Extreme Price'])
+    return df
 
-price_extrema(import_data('Price_data/EURUSD=X/15m.csv'), find_local_extrema(ma_data, 7))
+print(price_extrema(import_data('Price_data/EURUSD=X/15m.csv'), find_local_extrema(ma_data, 7)))

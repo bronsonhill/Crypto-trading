@@ -106,4 +106,4 @@ def update_ticker_data(ticker):
     return
 
 
-# update_ticker_data('EURUSD=X')
+update_ticker_data('GC=F')
