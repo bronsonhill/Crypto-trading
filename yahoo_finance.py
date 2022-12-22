@@ -2,6 +2,7 @@ import datetime
 import yfinance
 import pandas as pd
 import os
+from pytz import UTC
 
 
 HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
@@ -34,7 +35,7 @@ def file_exists(dir):
                 format_str = "%Y-%m-%d"
                 break
             else:
-                format_str = "%Y-%m-%d %H:%M:%S"
+                format_str = "%Y-%m-%d %H:%M:%S%z"
 
         # gives last price time
         recent_date = datetime.datetime.strptime(
@@ -59,6 +60,9 @@ def compile_data(ticker, interval):
         os.makedirs(f'Price_data/{ticker}')
 
     # sets start date of request according to whether file exists or not
+    today = datetime.datetime.now()
+    today = UTC.localize(today)
+    
     exist_bool = file_exists(dir)
     if exist_bool:
         start = exist_bool
@@ -68,6 +72,7 @@ def compile_data(ticker, interval):
         try:
             start = datetime.datetime.now() - datetime.timedelta(
             days=HISTORY_LIMIT[interval])
+            start = UTC.localize(start)
 
         except:
             print(f'Try interval: {[interval for interval in HISTORY_LIMIT.keys()]}')
@@ -77,7 +82,7 @@ def compile_data(ticker, interval):
     
     # makes request for data and appends to pandas dataframe
     end = start
-    while end < datetime.datetime.today():
+    while end < today:
         end = start + datetime.timedelta(days=REQUEST_LIMIT[interval])
         if not df.empty:
             df = pd.concat([df, fetch_ohlc_data(ticker, interval, start, end)])

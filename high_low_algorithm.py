@@ -1,12 +1,13 @@
 from data_processing import sma_data, import_data
 import pandas as pd
+import mplfinance as mpf
 
 
 def find_local_extrema(cont_data, ma_length=0):
     '''detects local extrema in continous data, returning a list of 
     tuples with index of extrema and extrema value'''
     
-    extrema = [(ma_length-1, cont_data[ma_length])]
+    extrema = []
     for i in range(1, len(cont_data) - 1):
         if cont_data[i] > cont_data[i-1] and cont_data[i] > cont_data[i+1]:
             # local maximum found
@@ -18,40 +19,64 @@ def find_local_extrema(cont_data, ma_length=0):
 
 
 def find_price_extrema(df, extrema):
-    '''accepts ohlc df and list of tuples of extrema and their index and
-    returns a list of tuples with index of extrema and price extrema'''
-
-    price_extrema_data = []
-    
+    '''accepts ohlc df and a list of tuples of indicator extrema and 
+    their index and uses it to detect trends/price-movements and their 
+    extrema. Returns a dataframe with columns datetime and Price'''
+    extrema_list = []
+    lower_index = extrema[0][0]
     # establishes initial trend
-    extrema = iter(extrema)
-    if next(extrema)[1] >= next(extrema)[1]:
+    if extrema[0][1] >= extrema[1][1]:
         up_trend = False
     else:
         up_trend = True
 
-    lower_index_bracket = 0
-    # records price extrema according to ma extrema
+    extrema_list += [(None, None)] * (lower_index)
+    # records price extrema with the guide of ma extrema
+    extrema = extrema[1:]
     for extreme in extrema:
-        price_list = []
-        upper_index_bracket = extreme[0]
-        trend_data = df.iloc[lower_index_bracket:upper_index_bracket]
-        # records max price point if in up trend
-        if up_trend:
-            for row in trend_data.itertuples():
-                price_list.append((row[0], row[2]))
-            price_extrema_data.append(max(price_list, key=lambda x: x[1]))
-            up_trend = False
-        # records min price point if in down trend
-        else:
-            for row in trend_data.itertuples():
-                price_list.append((row[0], row[2]))
-            price_extrema_data.append(min(price_list, key=lambda x: x[1]))
-            up_trend = True
-        lower_index_bracket = upper_index_bracket
+        upper_index = extreme[0]
+        trend_data = df.iloc[lower_index:upper_index]
 
-    df = pd.DataFrame(price_extrema_data, columns=['Datetime', 'Extreme Price'])
-    return df
+        if up_trend:
+            trend_str = 'up'
+            extrema_str = 'max'
+        else:
+            trend_str = 'down'
+            extrema_str = 'min'
+        print(f'Searching data in {trend_str} trend from index {lower_index} to {upper_index} for {extrema_str}')
+
+        # records max price point of up trend
+        if up_trend:
+            additional_extrema = len(trend_data)*[(None, None)]
+            extreme_price = max(trend_data['High'])
+            index = list(trend_data['High']).index(extreme_price)
+            date = trend_data.index[index]
+            additional_extrema[index] = (date, extreme_price)
+            extrema_list += additional_extrema
+            
+            print(f'max is {extreme_price}')
+            # reverses trend for next trend
+            up_trend = False
+        
+        # records min price point of down trend
+        else:
+            additional_extrema = len(trend_data)*[(None, None)]
+            extreme_price = min(trend_data['Low'])
+            index = list(trend_data['Low']).index(extreme_price)
+            date = trend_data.index[index]
+            additional_extrema[index] = (date, extreme_price)
+            extrema_list += additional_extrema
+
+            print(f'min is {extreme_price}')
+            # reverses trend for next trend
+            up_trend = True
+        lower_index = upper_index
+    
+    remaining_len = len(df.iloc[upper_index:])
+    extrema_list += [(None, None)] * (remaining_len)
+    extrema_df = pd.DataFrame(extrema_list, columns=['Datetime', 
+            'Extreme Price'])
+    return extrema_df
 
 
 def high_low(ticker, interval, ma_length):
@@ -64,5 +89,4 @@ def high_low(ticker, interval, ma_length):
 
     return find_price_extrema(ohlc_df, ma_extrema_df)
 
-
-# print(high_low('GC=F', '15m', 7))
+high_low('GC=F', '15m', 5)
