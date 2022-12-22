@@ -1,28 +1,25 @@
-from data_processing import sma_data, averaged_price, import_data
-
+from data_processing import sma_data, import_data
 import pandas as pd
 
-df = import_data('Price_data/EURUSD=X/15m.csv')
-ma_data = sma_data(averaged_price(df), 7)
 
-def find_local_extrema(data, length=0):
-    '''detects local extrema in data, returning a list of tuples with
-    index of extrema and extrema value'''
+def find_local_extrema(cont_data, ma_length=0):
+    '''detects local extrema in continous data, returning a list of 
+    tuples with index of extrema and extrema value'''
     
-    extrema = [(length-1, data[length])]
-    for i in range(1, len(data) - 1):
-        if data[i] > data[i-1] and data[i] > data[i+1]:
+    extrema = [(ma_length-1, cont_data[ma_length])]
+    for i in range(1, len(cont_data) - 1):
+        if cont_data[i] > cont_data[i-1] and cont_data[i] > cont_data[i+1]:
             # local maximum found
-            extrema.append((i, data[i]))
-        elif data[i] < data[i-1] and data[i] < data[i+1]:
+            extrema.append((i, cont_data[i]))
+        elif cont_data[i] < cont_data[i-1] and cont_data[i] < cont_data[i+1]:
             # local minimum found
-            extrema.append((i, data[i]))
+            extrema.append((i, cont_data[i]))
     return extrema
 
 
-def price_extrema(df, extrema):
-    '''accepts ohlc df and list of extrema and returns a list of tuples
-    with index of extrema and price extrema'''
+def find_price_extrema(df, extrema):
+    '''accepts ohlc df and list of tuples of extrema and their index and
+    returns a list of tuples with index of extrema and price extrema'''
 
     price_extrema_data = []
     
@@ -36,21 +33,36 @@ def price_extrema(df, extrema):
     lower_index_bracket = 0
     # records price extrema according to ma extrema
     for extreme in extrema:
+        price_list = []
         upper_index_bracket = extreme[0]
         trend_data = df.iloc[lower_index_bracket:upper_index_bracket]
         # records max price point if in up trend
         if up_trend:
             for row in trend_data.itertuples():
-                price_extrema_data.append((row[0], row[2]))
+                price_list.append((row[0], row[2]))
+            price_extrema_data.append(max(price_list, key=lambda x: x[1]))
             up_trend = False
         # records min price point if in down trend
         else:
             for row in trend_data.itertuples():
-                price_extrema_data.append((row[0], row[3]))
+                price_list.append((row[0], row[2]))
+            price_extrema_data.append(min(price_list, key=lambda x: x[1]))
             up_trend = True
         lower_index_bracket = upper_index_bracket
 
     df = pd.DataFrame(price_extrema_data, columns=['Datetime', 'Extreme Price'])
     return df
 
-print(price_extrema(import_data('Price_data/EURUSD=X/15m.csv'), find_local_extrema(ma_data, 7)))
+
+def high_low(ticker, interval, ma_length):
+    '''using various functions returns a dataframe with datetime and
+    extreme (high/low) price'''
+
+    ohlc_df = import_data(ticker, interval)
+    ma_data = sma_data(ohlc_df, ma_length)
+    ma_extrema_df = find_local_extrema(ma_data, ma_length)
+
+    return find_price_extrema(ohlc_df, ma_extrema_df)
+
+
+# print(high_low('GC=F', '15m', 7))

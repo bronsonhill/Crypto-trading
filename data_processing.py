@@ -1,10 +1,13 @@
 import pandas as pd
 
-def import_data(file_name, data_points=200):
-    '''collects specified price data from database and returns df'''
+def import_data(ticker, interval, data_points=200):
+    '''collects specified price data from database and returns it in
+    pandas dataframe'''
     
+    file_path = f'Price_data/{ticker}/{interval}.csv'
+
     # imports csv to df
-    df = pd.read_csv(file_name, index_col=0, parse_dates=True)
+    df = pd.read_csv(file_path, index_col=0, parse_dates=True)
     df.drop(df.columns[[4, 5, 6, 7]], axis=1, inplace=True)
     df = df.iloc[len(df)-data_points:len(df)]
     return df
