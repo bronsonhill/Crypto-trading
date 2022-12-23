@@ -62,7 +62,7 @@ def compile_data(ticker, interval):
     # sets start date of request according to whether file exists or not
     today = datetime.datetime.now()
     today = UTC.localize(today)
-    
+
     exist_bool = file_exists(dir)
     if exist_bool:
         start = exist_bool
@@ -99,16 +99,17 @@ def compile_data(ticker, interval):
     return
 
 
-def update_ticker_data(ticker):
+def update_ticker_data(tickers):
     '''compiles data for all intervals for a pair'''
-
-    # makes request for every interval
-    for interval in HISTORY_LIMIT.keys():
-        print(f'Compiling {interval} data for {ticker}.')
-        compile_data(ticker, interval)
-    print('Complete')
+    # make request for every ticker
+    for ticker in tickers:
+        # makes request for every interval
+        for interval in HISTORY_LIMIT.keys():
+            print(f'Compiling {interval} data for {ticker}.')
+            compile_data(ticker, interval)
+        print('Complete')
 
     return
 
 
-update_ticker_data('GC=F')
+update_ticker_data(['ZC=F', 'GC=F'])

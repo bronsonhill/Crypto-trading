@@ -9,7 +9,7 @@ from high_low_algorithm import high_low
 def chart_from_ticker(ticker, interval, signals=False, sma=0):
     ''''''
     filename = f'Price_data/{ticker}/{interval}.csv'
-    df = data_processing.import_data(ticker, interval)
+    df = data_processing.import_data(ticker, interval, 400)
     df.index = pd.to_datetime(df.index, utc=True)
     
     # create sma plot
@@ -33,7 +33,7 @@ def chart_from_ticker(ticker, interval, signals=False, sma=0):
 
 
 
-chart_from_ticker('GC=F', '15m', signals=True, sma=5)
+chart_from_ticker('ZC=F', '15m', signals=True, sma=5)
 
 
 def chart_manually(ohlc, sma_data, signal_data):

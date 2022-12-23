@@ -83,10 +83,18 @@ def high_low(ticker, interval, ma_length):
     '''using various functions returns a dataframe with datetime and
     extreme (high/low) price'''
 
-    ohlc_df = import_data(ticker, interval)
+    ohlc_df = import_data(ticker, interval, 400)
     ma_data = sma_data(ohlc_df, ma_length)
     ma_extrema_df = find_local_extrema(ma_data, ma_length)
 
     return find_price_extrema(ohlc_df, ma_extrema_df)
 
-high_low('GC=F', '15m', 5)
+
+def analyse_high_low(df):
+    '''takes an extreme price dataframe and returns statistics'''
+    print(list(df['Datetime'])[1])
+    print(list(df(['Datetime']))[2])
+    average_len = len(df)
+    return
+
+analyse_high_low(high_low('GC=F', '15m', 5))
