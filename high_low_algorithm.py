@@ -43,7 +43,7 @@ def find_price_extrema(df, extrema):
         else:
             trend_str = 'down'
             extrema_str = 'min'
-        print(f'Searching data in {trend_str} trend from index {lower_index} to {upper_index} for {extrema_str}')
+        print(f'Searching {trend_str} trend from index {lower_index} to {upper_index} for {extrema_str}...')
 
         # records max price point of up trend
         if up_trend:
@@ -54,7 +54,7 @@ def find_price_extrema(df, extrema):
             additional_extrema[index] = (date, extreme_price)
             extrema_list += additional_extrema
             
-            print(f'max is {extreme_price}')
+            print(f'...max is: {extreme_price}')
             # reverses trend for next trend
             up_trend = False
         
@@ -67,7 +67,7 @@ def find_price_extrema(df, extrema):
             additional_extrema[index] = (date, extreme_price)
             extrema_list += additional_extrema
 
-            print(f'min is {extreme_price}')
+            print(f'...min is: {extreme_price}')
             # reverses trend for next trend
             up_trend = True
         lower_index = upper_index
@@ -83,7 +83,7 @@ def high_low(ticker, interval, ma_length):
     '''using various functions returns a dataframe with datetime and
     extreme (high/low) price'''
 
-    ohlc_df = import_data(ticker, interval, 400)
+    ohlc_df = import_data(ticker, interval, 1000)
     ma_data = sma_data(ohlc_df, ma_length)
     ma_extrema_df = find_local_extrema(ma_data, ma_length)
 
@@ -92,8 +92,12 @@ def high_low(ticker, interval, ma_length):
 
 def analyse_high_low(df):
     '''takes an extreme price dataframe and returns statistics'''
-    print(list(df['Datetime'])[1])
-    print(list(df(['Datetime']))[2])
+    i = 0
+
+    for row in df.itertuples():
+        if row[0] == None:
+            df.drop(index=i)
+
     average_len = len(df)
     return
 
