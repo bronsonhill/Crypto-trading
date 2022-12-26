@@ -9,10 +9,12 @@ def find_local_extrema(cont_data):
     
     extrema = []
     for i in range(1, len(cont_data) - 1):
-        if cont_data[i] > cont_data[i-1] and cont_data[i] > cont_data[i+1]:
+        if (cont_data[i] >= cont_data[i-1] and cont_data[i] > cont_data[i+1]) or \
+            (cont_data[i] > cont_data[i-1] and cont_data[i] >= cont_data[i+1]):
             # local maximum found
             extrema.append((i, cont_data[i]))
-        elif cont_data[i] < cont_data[i-1] and cont_data[i] <= cont_data[i+1]:
+        elif (cont_data[i] < cont_data[i-1] and cont_data[i] <= cont_data[i+1]) \
+            or (cont_data[i] <= cont_data[i-1] and cont_data[i] < cont_data[i+1]):
             # local minimum found
             extrema.append((i, cont_data[i]))
     return extrema
@@ -32,6 +34,7 @@ def find_price_extrema(df, extrema):
 
     extrema_list += [(None, None)] * (lower_index)
     # records price extrema with the guide of ma extrema
+    prev_extreme = extrema[0][1]
     extrema = extrema[1:]
     for extreme in extrema:
         upper_index = extreme[0]
@@ -43,7 +46,7 @@ def find_price_extrema(df, extrema):
         else:
             trend_str = 'down'
             extrema_str = 'min'
-        print(f'Searching {trend_str} trend from index {lower_index} to {upper_index} for {extrema_str}...')
+        # print(f'Searching {trend_str} trend from index {lower_index} to {upper_index} for {extrema_str}...')
 
         # records max price point of up trend
         if up_trend:
@@ -54,7 +57,7 @@ def find_price_extrema(df, extrema):
             additional_extrema[index] = (date, extreme_price)
             extrema_list += additional_extrema
             
-            print(f'...max is: {extreme_price}')
+            # print(f'...max is: {extreme_price}')
             # reverses trend for next trend
             up_trend = False
         
@@ -67,18 +70,21 @@ def find_price_extrema(df, extrema):
             additional_extrema[index] = (date, extreme_price)
             extrema_list += additional_extrema
 
-            print(f'...min is: {extreme_price}')
+            # print(f'...min is: {extreme_price}')
             # reverses trend for next trend
+            if prev_extreme == extreme[0]:
+                print('something fishy')
             up_trend = True
         lower_index = upper_index
+        prev_extreme = extreme
 
-        # # Uncomment below to view chart of each trend movement detected 
-        # signal_data = pd.Series([y for (x, y) in additional_extrema])
-        # signal_plot = mpf.make_addplot(signal_data, type='scatter', markersize=100)
-        # trend_data.index = pd.to_datetime(trend_data.index, utc=True)
-        # mpf.plot(trend_data, title=f'{trend_str} trend', ylabel='Price', 
-        #     type='candle', style='mike', addplot=signal_plot,
-        #     volume=False)
+        # # view chart of each trend movement 
+        signal_data = pd.Series([y for (x, y) in additional_extrema])
+        signal_plot = mpf.make_addplot(signal_data, type='scatter', markersize=100)
+        trend_data.index = pd.to_datetime(trend_data.index, utc=True)
+        mpf.plot(trend_data, title=f'{trend_str} trend', ylabel='Price', 
+            type='candle', style='mike', addplot=signal_plot,
+            volume=False)
     remaining_len = len(df.iloc[upper_index:])
     extrema_list += [(None, None)] * (remaining_len)
     extrema_df = pd.DataFrame(extrema_list, columns=['Datetime', 
@@ -93,7 +99,7 @@ def high_low(ticker, interval, ma_length):
     ohlc_df = import_data(ticker, interval, 800)
     ma_data = sma_data(ohlc_df, ma_length)
     ma_extrema_df = find_local_extrema(ma_data)
-    print(ma_extrema_df)
+
     return find_price_extrema(ohlc_df, ma_extrema_df)
 
 
