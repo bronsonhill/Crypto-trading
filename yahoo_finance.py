@@ -2,10 +2,10 @@ import datetime
 import yfinance
 import pandas as pd
 import os
-from pytz import UTC
+import pytz
 
 
-HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
+HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 59, '30m': 60, 
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 300}
 
 REQUEST_LIMIT = {'1m': 7, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
@@ -24,7 +24,6 @@ def yfinance_fetch_ohlc(ticker, interval, start, end):
 def file_exists(dir):
     '''tests whether price data file already exists and returns last 
     price date if so, otherwise returns false'''
-    
     # tests file exists
     if os.path.exists(dir):
         df = pd.read_csv(dir)
@@ -37,10 +36,9 @@ def file_exists(dir):
             else:
                 format_str = "%Y-%m-%d %H:%M:%S%z"
 
-        # gives most recent price time
+        # gives the time of most recent price data
         recent_date = datetime.datetime.strptime(
-            df.iloc[-2,0:1].values[0],format_str) \
-            + datetime.timedelta(hours=16, minutes=1)
+            df.iloc[-2,0:1].values[0],format_str)
 
         return recent_date
     
@@ -60,9 +58,6 @@ def compile_data(ticker, interval):
         os.makedirs(f'Price_data/{ticker}')
 
     # sets start date of request according to whether file exists or not
-    today = datetime.datetime.now()
-    today = UTC.localize(today)
-
     exist_bool = file_exists(dir)
     if exist_bool:
         start = exist_bool
@@ -71,16 +66,20 @@ def compile_data(ticker, interval):
     else:
         try:
             start = datetime.datetime.now() - datetime.timedelta(
-            days=HISTORY_LIMIT[interval])
-            start = UTC.localize(start)
+                days=HISTORY_LIMIT[interval]) + datetime.timedelta(hours=16)
 
         except:
             print(f'Try interval: {[interval for interval in HISTORY_LIMIT.keys()]}')
             return
     
     df = pd.DataFrame()
-    # makes requests for data from api and appends to pandas dataframe
+    # makes requests for data from api and appends to pandas dataframe 
+    today = datetime.datetime.now()
+    if interval != '1d' and interval != '1wk' and interval != '1mo':
+        today = datetime.datetime.now(pytz.timezone('EST'))
+        start = start.astimezone(pytz.timezone('EST'))
     end = start
+
     while end < today:
         end = start + datetime.timedelta(days=REQUEST_LIMIT[interval])
         
@@ -94,9 +93,9 @@ def compile_data(ticker, interval):
     if exist_bool:
         # deletes last row of csv file
         csv_df = pd.read_csv(dir)
-        csv_df.drop(csv_df.index[-1])
-        csv_df.to_csv(dir)
-        df.to_csv(dir, mode='a', index=False, header=False)
+        csv_df.drop(csv_df.tail(2).index, inplace=True)
+        csv_df.to_csv(dir, index=False)
+        df.to_csv(dir, mode='a', index=True, header=False)
     else:
         df.to_csv(dir)
     
@@ -109,11 +108,12 @@ def update_ticker_data(tickers):
     for ticker in tickers:
         # makes request for every interval
         for interval in HISTORY_LIMIT.keys():
-            print(f'Compiling {interval} data for {ticker}.')
+            print(f'Retrieving {interval} data for {ticker}.')
             compile_data(ticker, interval)
         print('Complete')
 
     return
 
 
-compile_data('ZC=F', '15m')
+update_ticker_data(['ES=F'])
+# compile_data('ES=F', '15m')
