@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 # https://github.com/matplotlib/mplfinance/blob/master/examples/addplot.ipynb
 import mplfinance as mpf
 import data_processing
-from high_low_algorithm import high_low
+from high_low_algorithm import find_price_extrema
 
 
 def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4]):
@@ -20,7 +20,7 @@ def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4]):
     
     # create trend signals plot using the first sma length
     if trend_signals:
-        signal_data = high_low(ticker, interval, smas[0])['Extreme Price']
+        signal_data = find_price_extrema(ticker, interval, smas[0])['Extreme Price']
         print(type(signal_data))
         signal_plot = mpf.make_addplot(signal_data, type='scatter', markersize=60)
         addplot.append(signal_plot)
