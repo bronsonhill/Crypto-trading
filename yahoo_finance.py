@@ -11,6 +11,8 @@ HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 59, '30m': 60,
 REQUEST_LIMIT = {'1m': 7, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 10000}
 
+TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 'ETH-USD': 'Etc/UTC'}
+
 
 def yfinance_fetch_ohlc(ticker, interval, start, end):
     '''fetches ohlc data for ticker for interval and start and end time'''
@@ -74,10 +76,16 @@ def compile_data(ticker, interval):
     
     df = pd.DataFrame()
     # makes requests for data from api and appends to pandas dataframe 
-    today = datetime.datetime.now()
     if interval != '1d' and interval != '1wk' and interval != '1mo':
-        today = datetime.datetime.now(pytz.timezone('EST'))
-        start = start.astimezone(pytz.timezone('EST'))
+        for ticker_identifier, time_zone in TIMEZONE.items():
+            if ticker_identifier in ticker:
+                break
+        today = datetime.datetime.now(pytz.timezone(time_zone))
+        start = start.astimezone(pytz.timezone(time_zone))
+        print(start)
+    else:
+        today = datetime.datetime.now()
+
     end = start
 
     while end < today:
@@ -94,7 +102,7 @@ def compile_data(ticker, interval):
         # deletes last row of csv file
         csv_df = pd.read_csv(dir)
         csv_df.drop(csv_df.tail(2).index, inplace=True)
-        csv_df.to_csv(dir, index=False)
+        csv_df.to_csv(dir, index=False, index_label='Datetime')
         df.to_csv(dir, mode='a', index=True, header=False)
     else:
         df.to_csv(dir)
@@ -115,5 +123,5 @@ def update_ticker_data(tickers):
     return
 
 
-update_ticker_data(['ES=F'])
-# compile_data('ES=F', '15m')
+# update_ticker_data(['BTC-USD'])
+compile_data('EURUSD=X', '1m')

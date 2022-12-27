@@ -35,4 +35,4 @@ def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4]):
 
 
 
-chart_from_ticker('ES=F', '15m', trend_signals=True, smas=[4, 50])
+chart_from_ticker('BTC-USD', '1mo', trend_signals=True, smas=[4, 50])
