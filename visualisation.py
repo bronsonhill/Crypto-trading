@@ -1,15 +1,17 @@
 import pandas as pd
+import numpy as np
+from scipy import stats
 import matplotlib.pyplot as plt
 # https://github.com/matplotlib/mplfinance/blob/master/examples/addplot.ipynb
 import mplfinance as mpf
 import data_processing
-from high_low_algorithm import find_price_extrema
+from high_low_algorithm import find_trend_extrema, analyse_trend_time
 
 
-def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4]):
+def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4], data_points=300):
     ''''''
     filename = f'Price_data/{ticker}/{interval}.csv'
-    df = data_processing.import_data(ticker, interval, 800)
+    df = data_processing.import_data(ticker, interval, data_points)
     df.index = pd.to_datetime(df.index, utc=True)
     addplot = []
     # create sma plots
@@ -20,8 +22,8 @@ def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4]):
     
     # create trend signals plot using the first sma length
     if trend_signals:
-        signal_data = find_price_extrema(ticker, interval, smas[0])['Extreme Price']
-        print(type(signal_data))
+        signal_data = find_trend_extrema(ticker, interval, smas[0]
+            , data_points=data_points)['Extreme Price']
         signal_plot = mpf.make_addplot(signal_data, type='scatter', markersize=60)
         addplot.append(signal_plot)
 
@@ -30,9 +32,33 @@ def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4]):
         if name not in ('Open', 'High', 'Low', 'Close', 'Volume'):
             df.drop([name], axis=1, inplace=True)
 
-    # Create the candle plot
-    mpf.plot(df, type='candle', style='binance', addplot=addplot)
+    # Create the candle plot with custom style
+    mc = mpf.make_marketcolors(up='#1FFF56',down='#FF461F',inherit=True)
+    style  = mpf.make_mpf_style(base_mpf_style='nightclouds',marketcolors=mc)
+    mpf.plot(df, type='candle', title=f'\n\n{ticker} {interval} Chart', style=style, addplot=addplot)
 
 
+def hist(series, title=''):
+    ''''''
+    # first remove outliers from data
+    z = np.abs(stats.zscore(series))
+    series = series.drop(series.index[list(np.where(z > 3))])
 
-chart_from_ticker('BTC-USD', '1mo', trend_signals=True, smas=[4, 50])
+    # next create bin size
+    maximum = max(list(series))
+    binwidth = (maximum) / 30
+    bins = np.arange(0, max(list(series)) + binwidth, binwidth)
+
+    # now plot histogram
+    plt.hist(series, color='grey', bins=bins)
+    plt.title(title)
+    plt.ylabel('Frequency')
+    plt.ylabel('Time Elapsed (Hours)')
+    plt.show()
+    return
+
+series = analyse_trend_time('EURUSD=X', '15m', 5, 4000)['Time Elapsed']
+hist(series, 'Histogram\n')
+
+
+# chart_from_ticker('BTC-USD', '15m', trend_signals=True, smas=[5, 50])

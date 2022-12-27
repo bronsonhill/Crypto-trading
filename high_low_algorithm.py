@@ -1,6 +1,8 @@
 from data_processing import sma_data, import_data
 import pandas as pd
+import numpy as np
 import mplfinance as mpf
+import matplotlib.pyplot as plt
 
 
 def find_local_extrema(cont_data):
@@ -20,11 +22,12 @@ def find_local_extrema(cont_data):
     return extrema
 
 
-def find_price_extrema(ticker, interval, sma_length):
-    '''inputs ticker, interval and sma_length and uses it to detect 
-    trends/price-movements and their extrema. Returns a dataframe with 
-    columns datetime and Price'''
-    df = import_data(ticker, interval, 800)
+def find_trend_extrema(ticker, interval, sma_length, data_points):
+    '''For a ticker and interval returns a dataframe with the extreme
+    prices of trends defined by a moving average of 'sma_length'
+    Returns a dataframe with columns datetime and Price'''
+
+    df = import_data(ticker, interval, data_points)
     sma_list = list(sma_data(df, sma_length))
     extrema = find_local_extrema(sma_list)
     extrema_list = []
@@ -44,10 +47,10 @@ def find_price_extrema(ticker, interval, sma_length):
         extreme_i = extrema[i][0]
         upper_i = extrema[i][0]
         trend_data = df.iloc[lower_i:upper_i]
+        additional_extrema = len(trend_data)*[(None, None)]
 
         # records max price point of up trend
         if up_trend:
-            additional_extrema = len(trend_data)*[(None, None)]
             extreme_price = max(trend_data['High'])
             index = list(trend_data['High']).index(extreme_price)
             date = trend_data.index[index]
@@ -63,7 +66,6 @@ def find_price_extrema(ticker, interval, sma_length):
         
         # records min price point of down trend
         else:
-            additional_extrema = len(trend_data)*[(None, None)]
             extreme_price = min(trend_data['Low'])
             index = list(trend_data['Low']).index(extreme_price)
             date = trend_data.index[index]
@@ -93,14 +95,28 @@ def find_price_extrema(ticker, interval, sma_length):
     return pd.DataFrame(extrema_list, columns=['Datetime', 'Extreme Price'])
 
 
-def analyse_high_low(df):
-    '''takes an extreme price dataframe and returns statistics'''
-    i = 0
+def analyse_trend_time(ticker, interval, sma_length, data_points):
+    '''takes a trend extrema dataframe and returns a dataframe with
+    columns 'Datetime', of the start of the trend, and Time Elapsed'''
+    time_elapsed_col = []
+    iter_dates = []
+    df = find_trend_extrema(ticker, interval, sma_length, data_points)
+    # creates a list of datetimes to iterate through
+    for datetime in list(df['Datetime']):
+        if not pd.isnull(datetime):
+            iter_dates.append(datetime)
+    
+    # creates a list of the time elapsed in each trend
+    i = 1
+    while i < len(iter_dates): 
+        time_elapsed_col.append((iter_dates[i] - iter_dates[i-1]).total_seconds() / 3600)
+        i += 1
+    iter_dates.pop()
+    # saves to dataframe
+    time_elapsed_df = pd.DataFrame(
+        {'Datetime': iter_dates,
+         'Time Elapsed': time_elapsed_col
+        })
 
-    for row in df.itertuples():
-        if row[0] == None:
-            df.drop(index=i)
-
-    average_len = len(df)
-    return
+    return time_elapsed_df
 
