@@ -1,6 +1,16 @@
 import pandas as pd
 
-def import_data(ticker, interval, data_points=200):
+class Pair:
+    def __init__(self, ticker, interval):
+        self.ticker = ticker
+        self. interval = interval
+    
+    def __str__(self):
+        return self.ticker + self.interval
+
+BTC_USD_15m = Pair('BTC-USD', '15m')
+
+def import_data(ticker, interval, data_points=0):
     '''collects specified price data from database and returns it in
     pandas dataframe'''
     
@@ -9,7 +19,9 @@ def import_data(ticker, interval, data_points=200):
     # imports csv to df
     df = pd.read_csv(file_path, index_col=0, parse_dates=True)
     df.drop(df.columns[[4, 5, 6]], axis=1, inplace=True)
-    df = df.iloc[len(df)-data_points:len(df)]
+    # shortens dataframe if requested
+    if data_points:
+        df = df.iloc[len(df)-data_points:len(df)]
     return df
 
 

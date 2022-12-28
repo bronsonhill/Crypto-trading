@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # https://github.com/matplotlib/mplfinance/blob/master/examples/addplot.ipynb
 import mplfinance as mpf
 import data_processing
-from high_low_algorithm import find_trend_extrema, analyse_trend_time
+from high_low_algorithm import find_trend_extrema, analyse_trend_time, analyse_trend_movement
 
 
 def chart_from_ticker(ticker, interval, trend_signals=False, smas=[4], data_points=300):
@@ -46,8 +46,9 @@ def hist(series, title=''):
 
     # next create bin size
     maximum = max(list(series))
-    binwidth = (maximum) / 30
-    bins = np.arange(0, max(list(series)) + binwidth, binwidth)
+    minimum = min(list(series))
+    binwidth = (maximum) / 35
+    bins = np.arange(minimum, maximum + binwidth, binwidth)
 
     # now plot histogram
     plt.hist(series, color='grey', bins=bins)
@@ -57,8 +58,9 @@ def hist(series, title=''):
     plt.show()
     return
 
-# series = analyse_trend_time('TSLA', '15m', 5, 4000)['Time Elapsed']
-# hist(series, 'Histogram\n')
+series = analyse_trend_time('SI=F', '1m', 5)['Time Elapsed']
+series = analyse_trend_movement('BTC-USD', '1m', 7)['Price Movement']
+hist(series, 'Histogram\n')
 
 
-chart_from_ticker('ES=F', '1m', trend_signals=True, smas=[5, 50], data_points=3000)
+# chart_from_ticker('ES=F', '1m', trend_signals=True, smas=[5, 50], data_points=3000)

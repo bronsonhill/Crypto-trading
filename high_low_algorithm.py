@@ -22,7 +22,7 @@ def find_local_extrema(cont_data):
     return extrema
 
 
-def find_trend_extrema(ticker, interval, sma_length, data_points):
+def find_trend_extrema(ticker, interval, sma_length, data_points=0):
     '''For a ticker and interval returns a dataframe with the extreme
     prices of trends defined by a moving average of 'sma_length'
     Returns a dataframe with columns datetime and Price'''
@@ -95,12 +95,13 @@ def find_trend_extrema(ticker, interval, sma_length, data_points):
     return pd.DataFrame(extrema_list, columns=['Datetime', 'Extreme Price'])
 
 
-def analyse_trend_time(ticker, interval, sma_length, data_points):
+def analyse_trend_time(ticker, interval, sma_length, data_points=0):
     '''takes a trend extrema dataframe and returns a dataframe with
     columns 'Datetime', of the start of the trend, and Time Elapsed'''
     time_elapsed_col = []
     iter_dates = []
     df = find_trend_extrema(ticker, interval, sma_length, data_points)
+
     # creates a list of datetimes to iterate through
     for datetime in list(df['Datetime']):
         if not pd.isnull(datetime):
@@ -120,3 +121,33 @@ def analyse_trend_time(ticker, interval, sma_length, data_points):
 
     return time_elapsed_df
 
+
+def analyse_trend_movement(ticker, interval, sma_length, data_points=0):
+    ''''''
+    price_movement_col = []
+    iter_dates = []
+    iter_prices = []
+    df = find_trend_extrema(ticker, interval, sma_length, data_points)
+
+    # creates a list of datetimes and prices to iterate through
+    for datetime, price in df.itertuples(index=False):
+        if not pd.isnull(datetime):
+            iter_dates.append(datetime)
+            iter_prices.append(price)
+    
+    # creates a list of the time elapsed in each trend
+    i = 1
+    while i < len(iter_dates): 
+        price_movement_col.append(iter_prices[i] - iter_prices[i-1])
+        i += 1
+    iter_dates.pop()
+    # saves to dataframe
+    price_change_df = pd.DataFrame(
+        {'Datetime': iter_dates,
+         'Price Movement': price_movement_col
+        })
+
+    return price_change_df
+
+
+print(analyse_trend_movement('EURUSD=X', '15m', 5))

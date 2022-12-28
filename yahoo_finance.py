@@ -123,5 +123,5 @@ def update_ticker_data(tickers):
     return
 
 
-update_ticker_data(['EURUSD=X'])
+update_ticker_data(['SI=F'])
 # compile_data('EURUSD=X', '5m')
