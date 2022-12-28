@@ -11,7 +11,8 @@ HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 59, '30m': 60,
 REQUEST_LIMIT = {'1m': 7, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 10000}
 
-TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 'ETH-USD': 'Etc/UTC'}
+TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 
+        'ETH-USD': 'Etc/UTC', 'TSLA': 'EST'}
 
 
 def yfinance_fetch_ohlc(ticker, interval, start, end):
@@ -81,6 +82,7 @@ def compile_data(ticker, interval):
             if ticker_identifier in ticker:
                 break
         today = datetime.datetime.now(pytz.timezone(time_zone))
+        print(start)
         start = start.astimezone(pytz.timezone(time_zone))
         print(start)
     else:
@@ -123,5 +125,5 @@ def update_ticker_data(tickers):
     return
 
 
-# update_ticker_data(['BTC-USD'])
-compile_data('EURUSD=X', '1m')
+# update_ticker_data(['TSLA'])
+compile_data('TSLA', '1m')

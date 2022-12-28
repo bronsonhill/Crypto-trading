@@ -53,12 +53,12 @@ def hist(series, title=''):
     plt.hist(series, color='grey', bins=bins)
     plt.title(title)
     plt.ylabel('Frequency')
-    plt.ylabel('Time Elapsed (Hours)')
+    plt.xlabel('Time Elapsed (Hours)')
     plt.show()
     return
 
-series = analyse_trend_time('EURUSD=X', '15m', 5, 4000)['Time Elapsed']
-hist(series, 'Histogram\n')
+# series = analyse_trend_time('TSLA', '15m', 5, 4000)['Time Elapsed']
+# hist(series, 'Histogram\n')
 
 
-# chart_from_ticker('BTC-USD', '15m', trend_signals=True, smas=[5, 50])
+chart_from_ticker('TSLA', '15m', trend_signals=True, smas=[5, 50])
