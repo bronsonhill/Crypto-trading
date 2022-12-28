@@ -41,7 +41,7 @@ def file_exists(dir):
 
         # gives the time of most recent price data
         recent_date = datetime.datetime.strptime(
-            df.iloc[-2,0:1].values[0],format_str)
+            df.iloc[-2,0:1].values[0],format_str) + datetime.timedelta(hours=13)
 
         return recent_date
     
@@ -82,9 +82,7 @@ def compile_data(ticker, interval):
             if ticker_identifier in ticker:
                 break
         today = datetime.datetime.now(pytz.timezone(time_zone))
-        print(start)
-        start = start.astimezone(pytz.timezone(time_zone))
-        print(start)
+        start = start.astimezone(pytz.timezone('Australia/Victoria'))
     else:
         today = datetime.datetime.now()
 
@@ -125,5 +123,5 @@ def update_ticker_data(tickers):
     return
 
 
-# update_ticker_data(['TSLA'])
-compile_data('TSLA', '1m')
+update_ticker_data(['EURUSD=X'])
+# compile_data('EURUSD=X', '5m')

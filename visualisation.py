@@ -61,4 +61,4 @@ def hist(series, title=''):
 # hist(series, 'Histogram\n')
 
 
-chart_from_ticker('TSLA', '15m', trend_signals=True, smas=[5, 50])
+chart_from_ticker('ES=F', '1m', trend_signals=True, smas=[5, 50], data_points=3000)
