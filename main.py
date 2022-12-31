@@ -27,6 +27,9 @@ TREND_TIME_LIMITS = {'1m': 24, '2m': 24, '5m': 24, '15m': 24, '30m': 48,
 TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 
         'ETH-USD': 'Etc/UTC', 'TSLA': 'EST'}
 
+TICKER_NAMES = {'PL=F': 'Palladium', 'BTC-USD': 'Bitcoin USD', 
+        'CL=F': 'Crude Oil', 'HG=F': 'Copper', 'ZW=F': 'Wheat'}
+
 def find_local_extrema(cont_data):
     '''detects local extrema in continous data, returning a list of 
     tuples with index of extrema and extrema value'''
@@ -120,7 +123,7 @@ class Pair:
 
             # determines the required datetime format
             for elem in ['1d', '1wk', '1mo']:
-                if elem in dir:
+                if elem == self.interval:
                     format_str = "%Y-%m-%d"
                     recent_date = datetime.datetime.strptime(
                     df.iloc[-2,0:1].values[0],format_str) + datetime.timedelta(hours=12)
@@ -384,12 +387,12 @@ class Pair:
             'Price Movement': price_movement_col
             })
 
-        print(price_change_df.shape, len(iter_prices), df.shape)
         return price_change_df
     
 
     def ohlc_chart(self, trend_signals=True, smas=[4], data_points=300):
         ''''''
+        print(data_points)
         ticker = self.ticker
         interval = self.interval
         df = self.import_from_database(data_points)
@@ -410,13 +413,13 @@ class Pair:
 
         # prepares df for candle plot
         for name in df.columns:
-            if name not in ('Open', 'High', 'Low', 'Close', 'Volume'):
+            if name not in ('Open', 'High', 'Low', 'Close'):
                 df.drop([name], axis=1, inplace=True)
 
         # Create the candle plot with custom style
         mc = mpf.make_marketcolors(up='#1FFF56',down='#FF461F',inherit=True)
         style  = mpf.make_mpf_style(base_mpf_style='nightclouds',marketcolors=mc)
-        mpf.plot(df, type='candle', title=f'\n\n{ticker} {interval} Chart', style=style, addplot=addplot)
+        mpf.plot(df, type='candle', title=f'\n\n{ticker} {interval} Chart', style=style, addplot=addplot, show_nontrading=False)
         return
 
 
@@ -424,9 +427,9 @@ class Pair:
         '''returns a figure of histograms where the integer inputted is
         the length of the sma used to define the trends'''
         fig, axs =  plt.subplots(ncols=2, nrows=2, figsize=(8, 8))
+        fig.suptitle(f'{self.ticker}{self.interval}', fontsize=14)
         trend_movement_data = self.clean_data(self.analyse_trend_movement(sma_length)['Price Movement'])
         trend_time_data = self.clean_data(self.analyse_trend_time(sma_length)['Time Elapsed'], 3)
-        trend_movement_data.to_csv('test.csv')
         
         axs[0][0].hist(trend_movement_data, bins=bin_size(trend_movement_data))
         axs[0][0].set(xlabel='Price Movement (%)', ylabel='Frequency', title='Trend Price Movement Histogram')
@@ -435,15 +438,17 @@ class Pair:
         axs[0][1].set(xlabel='Elasped Time (Hrs)', ylabel='Frequency', title='Trend Elapsed Time Histogram')
         
         axs[1][0].plot(trend_movement_data)
+        axs[1][0].set(xlabel='Trend No.', ylabel='Trend Movement (%)', title='\n\nTrend Elapsed Time Histogram')
         axs[1][1].plot(trend_time_data)
-
-        plt.show()
+        axs[1][1].set(xlabel='Trend No.', ylabel='Elapsed time', title='\n\nTrend Elapsed Time')
+        
         return
     
 
     def scatter_chart(self, sma_length=4):
         ''''''
-        fig, axs =  plt.subplots(ncols=2, figsize=(14, 7))
+        fig, axs =  plt.subplots(ncols=2, figsize=(10, 5))
+        fig.suptitle(f'{self.ticker}{self.interval}', fontsize=14)
         trend_movement_data = list(self.analyse_trend_movement(sma_length)['Price Movement'])
         trend_time_data = list(self.analyse_trend_time(sma_length)['Time Elapsed'])
         
@@ -467,17 +472,16 @@ class Pair:
             i += 1
 
 
-        axs[0].scatter(x, y)
+        axs[0].scatter(x, y, linewidths=0.5)
         axs[0].set(xlabel='Following downtrend move (%)', 
             ylabel='Uptrend move (%)', 
             title='Uptrend % move and the following downtrend % move'
             )
-        axs[1].scatter(x1, y1)
+        axs[1].scatter(x1, y1, linewidths=0.5)
         axs[1].set(xlabel='Following downtrend time (Hrs)', 
             ylabel='Uptrend time (Hrs)', 
             title='Uptrend time and the following downtrend time'
             )
-        plt.show()
 
 
         return
@@ -486,8 +490,11 @@ class Pair:
 
 
 
+ticker = Ticker('ZW=F')
+ticker.update_data()
+ticker.timeframe_15m.scatter_chart(6)
+ticker.timeframe_15m.hist_chart(6)
+ticker.timeframe_15m.ohlc_chart(smas=[6, 50], data_points=400)
+plt.show()
 
-gold_ticker = Ticker('EURUSD=X')
-gold_ticker.timeframe_5m.scatter_chart()
-gold_ticker.timeframe_5m.hist_chart()
 # pair.ohlc_chart(smas=[4, 50], data_points=0)
