@@ -21,14 +21,25 @@ INTERVAL_MINUTES = {'1m': 1, '2m': 2, '5m': 5, '15m': 15, '30m': 30,
 '1h': 60, '1d': 1140, '1wk': 10080, '1mo': 43829}
 
 # the limits to trend time in hours - used to remove outliers
-TREND_TIME_LIMITS = {'1m': 24, '2m': 24, '5m': 24, '15m': 24, '30m': 48, 
-'1h': 168, '1d': 0, '1wk': 0, '1mo': 0}
+TREND_TIME_LIMITS = {'1m': 5, '2m': 10, '5m': 20, '15m': 24, '30m': 48, 
+'1h': 96, '1d': 0, '1wk': 0, '1mo': 0}
 
 TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 
         'ETH-USD': 'Etc/UTC', 'TSLA': 'EST'}
 
-TICKER_NAMES = {'PL=F': 'Palladium', 'BTC-USD': 'Bitcoin USD', 
-        'CL=F': 'Crude Oil', 'HG=F': 'Copper', 'ZW=F': 'Wheat'}
+TICKER_NAMES = {'PL=F': 'Platinum', 'BTC-USD': 'Bitcoin USD', 
+        'CL=F': 'Crude Oil', 
+        'HG=F': 'Copper', 
+        'ZW=F': 'Wheat', 
+        'ES=F': 'E-Mini S&P 500', 
+        'ETH-USD': 'Ethereum USD', 
+        'EURUSD=X': 'EURUSD',
+        'GC=F': 'Gold USD/oz',
+        'PA=F': 'Palladium',
+        'SI=F': 'Silver USD/oz',
+        'TSLA': 'Tesla Shares',
+        'ZO=F': 'Oat'
+        }
 
 def find_local_extrema(cont_data):
     '''detects local extrema in continous data, returning a list of 
@@ -75,24 +86,26 @@ def remove_outliers(series, deviations=3):
 class Ticker:
     def __init__(self, ticker):
         self.ticker = ticker
-        self.timeframe_1m = Pair(ticker, '1m')
-        self.timeframe_5m = Pair(ticker, '5m')
-        self.timeframe_15m = Pair(ticker, '15m')
-        self.timeframe_30m = Pair(ticker, '30m')
-        self.timeframe_1h = Pair(ticker, '1h')
-        self.timeframe_1d = Pair(ticker, '1d')
-        self.timeframe_1wk = Pair(ticker, '1wk')
-        self.timeframe_1mo = Pair(ticker, '1mo')
+        self.tf_1m = Pair(ticker, '1m')
+        self.tf_2m = Pair(ticker, '2m')
+        self.tf_5m = Pair(ticker, '5m')
+        self.tf_15m = Pair(ticker, '15m')
+        self.tf_30m = Pair(ticker, '30m')
+        self.tf_1h = Pair(ticker, '1h')
+        self.tf_1d = Pair(ticker, '1d')
+        self.tf_1wk = Pair(ticker, '1wk')
+        self.tf = Pair(ticker, '1mo')
     
     def update_data(self):
-        self.timeframe_1m.compile_data()
-        self.timeframe_5m.compile_data()
-        self.timeframe_15m.compile_data()
-        self.timeframe_30m.compile_data()
-        self.timeframe_1h.compile_data()
-        self.timeframe_1d.compile_data()
-        self.timeframe_1wk.compile_data()
-        self.timeframe_1mo.compile_data()
+        self.tf_1m.retrieve_data()
+        self.tf_2m.retrieve_data()
+        self.tf_5m.retrieve_data()
+        self.tf_15m.retrieve_data()
+        self.tf_30m.retrieve_data()
+        self.tf_1h.retrieve_data()
+        self.tf_1d.retrieve_data()
+        self.tf_1wk.retrieve_data()
+        self.tf.retrieve_data()
 
 
 class Pair:
@@ -122,16 +135,16 @@ class Pair:
             df = pd.read_csv(dir)
 
             # determines the required datetime format
-            for elem in ['1d', '1wk', '1mo']:
-                if elem == self.interval:
-                    format_str = "%Y-%m-%d"
-                    recent_date = datetime.datetime.strptime(
-                    df.iloc[-2,0:1].values[0],format_str) + datetime.timedelta(hours=12)
-                    break
-                else:
-                    format_str = "%Y-%m-%d %H:%M:%S%z"
-                    recent_date = datetime.datetime.strptime(
-                        df.iloc[-2,0:1].values[0],format_str)
+            if self.interval in ['1d', '1wk', '1mo']:
+                format_str = "%Y-%m-%d"
+                recent_date = datetime.datetime.strptime(
+                df.iloc[-2,0:1].values[0],format_str) + datetime.timedelta(hours=12)
+                
+                return recent_date
+
+            format_str = "%Y-%m-%d %H:%M:%S%z"
+            recent_date = datetime.datetime.strptime(
+                df.iloc[-2,0:1].values[0],format_str)
 
             # gives the time of most recent price data
 
@@ -181,26 +194,64 @@ class Pair:
             df = self.averaged_price(data_points)
 
         # returns moving average
-        return df['Price'].rolling(length).mean() 
+        return df['Price'].rolling(length).mean()
 
+    
+    def ema_data(self, length, data_points=0):
+        '''from price df returns a lsit of EMA values of specified 
+        length. Formula: \n
+        EMA = K x (Current Price - Previous EMA) + Previous EMA,
+        where k = 2/(n+1)'''
+        ema_data = []
+        k = 2/(length+1)
+        df = self.import_from_database(data_points)
+        
+        # determines if Price column must be added
+        if 'Price' in df.columns:
+            None
+        else:
+            df = self.averaged_price(data_points)
 
-    def clean_data(self, series, apply_limits=False, sds=3):
-        # print(f'SD = {np.std(series)}\nmean = {np.mean(series)}')
-        if apply_limits:
-            indexes = []
-            i = 0
-            for row in series:
-                if row >= TREND_TIME_LIMITS[self.interval]:
-                    indexes.append(i)
+        price_data = list(df['Price'])
+        initial_value = 0
+
+        # calculates first value of ema with sma formula
+        for i in range(length):
+            initial_value += price_data[i]
+            ema_data.append(float('nan'))
+        ema_data[-1]= initial_value / length
+
+        # calculates rest of ema values
+        while i < len(price_data)-1:
+            ema_data.append(k * (price_data[i]-ema_data[i]) + ema_data[i])
             
-            series = series.drop(indexes)
+            i += 1
+        return ema_data
 
-        z = np.abs(stats.zscore(series))
-        series = series.drop(series.index[list(np.where(z > sds))])
+
+    def clean_data(self, series, zscore = True, interval_limit=False, sds=3):
+        ''''''
+        # when requested, will drop all trends which are over limit
+        if interval_limit:
+            if TREND_TIME_LIMITS[self.interval]:
+                indexes = []
+                i = 0
+                for row in series:
+                    if row >= TREND_TIME_LIMITS[self.interval]:
+                        indexes.append(i)
+                
+                series = series.drop(indexes)
+
+        # drops value from series where zscore is greater than the 
+        # specified sds
+        if zscore:
+            z = np.abs(stats.zscore(series))
+            series = series.drop(series.index[list(np.where(z > sds))])
+        
         return series
 
 
-    def compile_data(self):
+    def retrieve_data(self):
         '''adds requested data to price data folder as csv'''
         ticker = self.ticker
         interval = self.interval
@@ -233,7 +284,6 @@ class Pair:
                     break
             today = datetime.datetime.now(pytz.timezone('Australia/Victoria'))
             start = start.astimezone(pytz.timezone('Australia/Victoria'))
-            # print(start, today)
         else:
             today = datetime.datetime.now()
 
@@ -287,7 +337,6 @@ class Pair:
             upper_i = extrema[i][0]
             trend_data = df.iloc[lower_i:upper_i]
             additional_extrema = len(trend_data)*[(None, None)]
-
             # records max price point of up trend
             if up_trend:
                 extreme_price = max(trend_data['High'])
@@ -330,13 +379,14 @@ class Pair:
         
         remaining_len = len(df.iloc[upper_i:])
         extrema_list += [(None, None)] * (remaining_len)
-        print()
+
         return pd.DataFrame(extrema_list, columns=['Datetime', 'Extreme Price'])
 
 
     def analyse_trend_time(self, sma_length, data_points=0):
         '''takes a trend extrema dataframe and returns a dataframe with
         columns 'Datetime', of the start of the trend, and Time Elapsed'''
+        date_col = []
         time_elapsed_col = []
         iter_dates = []
         df = self.find_trend_extrema(sma_length, data_points)
@@ -349,12 +399,15 @@ class Pair:
         # creates a list of the time elapsed in each trend
         i = 1
         while i < len(iter_dates): 
-            time_elapsed_col.append((iter_dates[i] - iter_dates[i-1]).total_seconds() / 3600)
+            interval = (iter_dates[i] - iter_dates[i-1]).total_seconds() / 3600
+            if interval <= TREND_TIME_LIMITS[self.interval]:
+                time_elapsed_col.append(interval)
+                date_col.append(iter_dates[i-1])
             i += 1
         iter_dates.pop()
         # saves to dataframe
         time_elapsed_df = pd.DataFrame(
-            {'Datetime': iter_dates,
+            {'Datetime': date_col,
             'Time Elapsed': time_elapsed_col
             })
 
@@ -363,6 +416,7 @@ class Pair:
 
     def analyse_trend_movement(self, sma_length, data_points=0):
         '''pickle'''
+        date_col = []
         price_movement_col = []
         iter_dates = []
         iter_prices = []
@@ -373,26 +427,27 @@ class Pair:
             if not pd.isnull(datetime):
                 iter_dates.append(datetime)
                 iter_prices.append(price)
-        
         # creates a list of the time elapsed in each trend
         i = 1
-        while i < len(iter_dates): 
-            percent_move = (iter_prices[i] - iter_prices[i-1])/iter_prices[i]*100
-            price_movement_col.append(percent_move)
+        while i < len(iter_dates):
+            interval = (iter_dates[i] - iter_dates[i-1]).total_seconds() / 3600
+            if interval <= TREND_TIME_LIMITS[self.interval]:
+                percent_move = (iter_prices[i] - iter_prices[i-1])/iter_prices[i-1]*100
+                price_movement_col.append(percent_move)
+                date_col.append(iter_dates[i-1])
             i += 1
         iter_dates.pop()
         # saves to dataframe
         price_change_df = pd.DataFrame(
-            {'Datetime': iter_dates,
+            {'Datetime': date_col,
             'Price Movement': price_movement_col
             })
 
         return price_change_df
     
 
-    def ohlc_chart(self, trend_signals=True, smas=[4], data_points=300):
+    def ohlc_chart(self, trend_signals=True, smas=[4], emas=[], data_points=300):
         ''''''
-        print(data_points)
         ticker = self.ticker
         interval = self.interval
         df = self.import_from_database(data_points)
@@ -401,6 +456,11 @@ class Pair:
         # create sma plots
         for sma in smas:
             sma_data = self.sma_data(length=sma, data_points=data_points)
+            sma_plot = mpf.make_addplot(sma_data)
+            addplot.append(sma_plot)
+        
+        for ema in emas:
+            sma_data = self.ema_data(length=sma, data_points=data_points)
             sma_plot = mpf.make_addplot(sma_data)
             addplot.append(sma_plot)
         
@@ -428,8 +488,14 @@ class Pair:
         the length of the sma used to define the trends'''
         fig, axs =  plt.subplots(ncols=2, nrows=2, figsize=(8, 8))
         fig.suptitle(f'{self.ticker}{self.interval}', fontsize=14)
-        trend_movement_data = self.clean_data(self.analyse_trend_movement(sma_length)['Price Movement'])
-        trend_time_data = self.clean_data(self.analyse_trend_time(sma_length)['Time Elapsed'], 3)
+        trend_movement_data = self.clean_data(
+                self.analyse_trend_movement(sma_length)['Price Movement'], 
+                interval_limit=True
+            )
+        trend_time_data = self.clean_data(
+                self.analyse_trend_time(sma_length)['Time Elapsed'], 
+                interval_limit=True
+            )
         
         axs[0][0].hist(trend_movement_data, bins=bin_size(trend_movement_data))
         axs[0][0].set(xlabel='Price Movement (%)', ylabel='Frequency', title='Trend Price Movement Histogram')
@@ -447,42 +513,61 @@ class Pair:
 
     def scatter_chart(self, sma_length=4):
         ''''''
-        fig, axs =  plt.subplots(ncols=2, figsize=(10, 5))
+        fig, axs =  plt.subplots(nrows=2, ncols=2, figsize=(9, 9))
         fig.suptitle(f'{self.ticker}{self.interval}', fontsize=14)
         trend_movement_data = list(self.analyse_trend_movement(sma_length)['Price Movement'])
         trend_time_data = list(self.analyse_trend_time(sma_length)['Time Elapsed'])
-        
         # x is the % of a down trend following an up trend
         x = []
         x1 = []
+        x2 = []
         # y is the % of the up trend
         y = []
         y1 = []
+        y2 = []
         i = 0
         while i < len(trend_movement_data)-1:
             row = trend_movement_data[i]
             next_row = trend_movement_data[i+1]
             if row > 0:
                 if next_row < 0:
-                    y.append(row)
+                    x.append(row)
                     y1.append(trend_time_data[i])
-                    x.append(trend_movement_data[i+1])
+                    y.append(next_row)
                     x1.append(trend_time_data[i+1])
-                i += 1
+            # Collecting data of opposite
+            else:
+                if next_row > 0:
+                    x2.append(row)
+                    y2.append(next_row)
             i += 1
 
 
-        axs[0].scatter(x, y, linewidths=0.5)
-        axs[0].set(xlabel='Following downtrend move (%)', 
-            ylabel='Uptrend move (%)', 
-            title='Uptrend % move and the following downtrend % move'
+        axs[0][0].scatter(x, y, linewidths=0.5)
+        axs[0][0].set(xlabel='Uptrend move (%)', 
+            ylabel='Following downtrend move (%)', 
+            title='Consecutive trend sizes (Up -> Down)'
             )
-        axs[1].scatter(x1, y1, linewidths=0.5)
-        axs[1].set(xlabel='Following downtrend time (Hrs)', 
+        axs[0][1].scatter(x2, y2, linewidths=0.5)
+        axs[0][1].set(xlabel='Downtrend move %', 
+            ylabel='Following uptrend move (%)', 
+            title='Consecutive trend sizes (Down -> Up)'
+            )
+        axs[1][0].scatter(x1, y1, linewidths=0.5)
+        axs[1][0].set(xlabel='Following downtrend time (Hrs)', 
             ylabel='Uptrend time (Hrs)', 
             title='Uptrend time and the following downtrend time'
             )
-
+        axs[1][1].scatter(y1, y, linewidths=0.5)
+        axs[1][1].set(xlabel='Uptrend time (Hrs)', 
+            ylabel='Following downtrend move (%)', 
+            title='Uptrend time and the following downtrend time'
+            )
+        
+        print(f'Correlation of uptrend and following downtrend: {np.corrcoef(x, y)[0][1]}')
+        print(f'Correlation of downtrend and following uptrend: {np.corrcoef(x2, y2)[0][1]}')
+        print(f'Correlation of uptrend time and following downtrend time: {np.corrcoef(x1, y1)[0][1]}')
+        print(f'Correlation of uptrend time and following downtrend move: {np.corrcoef(y1, y)[0][1]}')
 
         return
 
@@ -490,11 +575,12 @@ class Pair:
 
 
 
-ticker = Ticker('ZW=F')
-ticker.update_data()
-ticker.timeframe_15m.scatter_chart(6)
-ticker.timeframe_15m.hist_chart(6)
-ticker.timeframe_15m.ohlc_chart(smas=[6, 50], data_points=400)
-plt.show()
+ticker = Ticker('LINK-USD')
 
-# pair.ohlc_chart(smas=[4, 50], data_points=0)
+# ticker.update_data()
+# print(ticker.tf_1m.find_trend_extrema(4))
+# ticker.tf_1h.scatter_chart(12)
+# ticker.tf_1d.hist_chart(4)
+# ticker.tf_1d.ohlc_chart(smas=[4],emas=[4], data_points=1500)
+
+plt.show()
