@@ -575,12 +575,12 @@ class Pair:
 
 
 
-ticker = Ticker('LINK-USD')
+ticker = Ticker('BTC-USD')
 
 # ticker.update_data()
 # print(ticker.tf_1m.find_trend_extrema(4))
-# ticker.tf_1h.scatter_chart(12)
-# ticker.tf_1d.hist_chart(4)
+ticker.tf_1m.scatter_chart(5)
+ticker.tf_1m.hist_chart(5)
 # ticker.tf_1d.ohlc_chart(smas=[4],emas=[4], data_points=1500)
 
 plt.show()
