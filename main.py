@@ -28,22 +28,9 @@ INTERVAL_MINUTES = {'1m': 1, '2m': 2, '5m': 5, '15m': 15, '30m': 30,
 TREND_TIME_LIMITS = {'1m': 5, '2m': 10, '5m': 20, '15m': 24, '30m': 48, 
 '1h': 96, '1d': 0, '1wk': 0, '1mo': 0}
 
-TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 
-        'ETH-USD': 'Etc/UTC', 'TSLA': 'EST'}
+TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', '-': 'Etc/UTC', 
+        'TSLA': 'EST', '^': 'EST'}
 
-YF_TICKER_NAMES = {'PL=F': 'Platinum', 'BTC-USD': 'Bitcoin USD', 
-        'CL=F': 'Crude Oil', 
-        'HG=F': 'Copper', 
-        'ZW=F': 'Wheat', 
-        'ES=F': 'E-Mini S&P 500', 
-        'ETH-USD': 'Ethereum USD', 
-        'EURUSD=X': 'EURUSD',
-        'GC=F': 'Gold USD/oz',
-        'PA=F': 'Palladium',
-        'SI=F': 'Silver USD/oz',
-        'TSLA': 'Tesla Shares',
-        'ZO=F': 'Oat'
-        }
 
 def find_local_extrema(cont_data):
     '''detects local extrema in continous data, returning a list of 
@@ -86,6 +73,20 @@ def remove_outliers(series, deviations=3):
     return np.where(series > deviations)
 
 
+def update_database(days=7):
+    '''Retrieves all Ticker data that has not been updated in specified 
+    number of days'''
+    days = datetime.timedelta(days=days)
+    with open('Info/data_retrieval_log.json', 'r') as fp:
+        data = json.load(fp)
+
+    for ticker, date in data.items():
+        date = datetime.datetime.strptime(date, "%Y-%m-%d")
+        if (datetime.datetime.today() - date) >= days:
+            Ticker(ticker).update_data()
+
+    return
+
 
 class Ticker:
     def __init__(self, ticker):
@@ -110,6 +111,14 @@ class Ticker:
         self.tf_1d.retrieve_data()
         self.tf_1wk.retrieve_data()
         self.tf.retrieve_data()
+
+        # stores date of data retrieval for future reference
+        with open('Info/data_retrieval_log.json', 'r') as fp:
+            data = json.load(fp)
+            today = datetime.datetime.today().strftime("%Y-%m-%d")
+            data[str(self.ticker)] = today
+        with open('Info/data_retrieval_log.json', 'w') as fp:
+            json.dump(data, fp)
 
 
 class Pair:
@@ -309,7 +318,8 @@ class Pair:
         if exist_bool:
             start = exist_bool
         
-        # sets start date to oldest date allowed by yfinance
+        # sets start date to oldest date allowed by yfinance if some data not
+        # already pre-existing in database
         else:
             try:
                 start = datetime.datetime.now() - datetime.timedelta(
@@ -350,6 +360,7 @@ class Pair:
             df.to_csv(dir, mode='a', index=True, header=False)
         else:
             df.to_csv(dir)
+        
         
         return
 
@@ -621,8 +632,5 @@ class Pair:
 
 
 
-Ticker('ZW=F').update_data()
 
 print(f'------ Total Runtime: {(time.time()-start_time):.3f} seconds ------')
-
-# plt.show()

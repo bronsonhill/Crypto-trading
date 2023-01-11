@@ -2,28 +2,16 @@ import pandas as pd
 import numpy as np
 import datetime
 import json
-
-YF_TICKER_NAMES = {'PL=F': 'Platinum', 'BTC-USD': 'Bitcoin USD', 
-        'CL=F': 'Crude Oil', 
-        'HG=F': 'Copper', 
-        'ZW=F': 'Wheat', 
-        'ES=F': 'E-Mini S&P 500', 
-        'ETH-USD': 'Ethereum USD', 
-        'EURUSD=X': 'EURUSD',
-        'GC=F': 'Gold USD/oz',
-        'PA=F': 'Palladium',
-        'SI=F': 'Silver USD/oz',
-        'TSLA': 'Tesla Shares',
-        'ZO=F': 'Oat'
-        }
-
-
-with open('Info/yf_ticker_names.json', 'w') as fp:
-     json.dump(YF_TICKER_NAMES, fp)
      
 with open('Info/yf_ticker_names.json', 'r') as fp:
      data = json.load(fp)
-     print(data)
+
+log = dict()
+for ticker in data:
+     log[ticker] = "2023-01-11"
+
+with open('Info/data_retrieval_log.json', 'w') as fp:
+     json.dump(log, fp)
 
 
 
