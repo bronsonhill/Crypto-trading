@@ -1,19 +1,23 @@
 import datetime
+import time
 import yfinance
+from binance import Client
 import numpy as np
 from scipy import stats
 import pandas as pd
+import json
 import os
 import pytz
 import matplotlib.pyplot as plt
 import mplfinance as mpf
 
+start_time = time.time()
 # the days of history available from yfinance
-HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
+YF_HISTORY_LIMIT = {'1m': 30, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 300}
 
 # the days of history requestable from yfinance per request
-REQUEST_LIMIT = {'1m': 7, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
+YF_REQUEST_LIMIT = {'1m': 7, '2m': 60, '5m': 60, '15m': 60, '30m': 60, 
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 10000}
 
 # the minutes in each interval
@@ -27,7 +31,7 @@ TREND_TIME_LIMITS = {'1m': 5, '2m': 10, '5m': 20, '15m': 24, '30m': 48,
 TIMEZONE = {'=X': 'Etc/GMT', '=F': 'EST', 'BTC-USD': 'Etc/UTC', 
         'ETH-USD': 'Etc/UTC', 'TSLA': 'EST'}
 
-TICKER_NAMES = {'PL=F': 'Platinum', 'BTC-USD': 'Bitcoin USD', 
+YF_TICKER_NAMES = {'PL=F': 'Platinum', 'BTC-USD': 'Bitcoin USD', 
         'CL=F': 'Crude Oil', 
         'HG=F': 'Copper', 
         'ZW=F': 'Wheat', 
@@ -112,6 +116,22 @@ class Pair:
     def __init__(self, ticker, interval):
         self.ticker = ticker
         self. interval = interval
+
+        # intialises ticker name
+        with open('Info/yf_ticker_names.json', 'r') as fp:
+            ticker_names = json.load(fp)
+            
+            # in the case that it is recorded already
+            if ticker in ticker_names:
+                self.ticker__name = ticker_names[ticker]
+            else:
+                name = input(f'The ticker name for {ticker} has not yet been recorded. Enter the name you would like it to be recorded as: ')
+                ticker_names[ticker] = name
+        
+        # in the case it is not yet recorded
+        with open('Info/yf_ticker_names.json', 'w') as fp:
+            json.dump(ticker_names, fp)
+
         self.dir = f'Price_data/{self.ticker}/{self.interval}.csv'
     
 
@@ -123,6 +143,29 @@ class Pair:
         '''fetches ohlc dataframe for ticker for interval and start and end time'''
         ticker = yfinance.Ticker(self.ticker)
         df = ticker.history(start=start, end=end, interval=self.interval)
+        return df
+
+    
+    def binance_fetch_ohlc(self, start):
+        client = Client(
+            api_key='FuaLBWg3iJCPTTQrU1yewim305sUVvZwOzO4Xau75JLHP0lTlpK9V7bdbPSBZOwF', 
+            api_secret='b8mt4w5PKu0gIvDoWHWSpGxdj8dWzesQ4RFCufcHf7l1D6LFMwQN2BAzyqN3lcTI'
+    )
+        historical_data = client.get_historical_klines(self.ticker, 
+            self.interval, start)
+        
+        df = pd.DataFrame(historical_data, columns=['Datetime', 'Open', 
+        'High', 'Low', 'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
+        'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore'])
+
+        df['Datetime'] = pd.to_datetime(df['Open Time']/1000, unit='s')
+        df['Close Time'] = pd.to_datetime(df['Close Time']/1000, unit='s')
+
+        numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume', 
+            'Quote Asset Volume', 'TB Base Volume', 'TB Quote Volume']
+        
+        df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, axis=1)
+
         return df
     
 
@@ -270,10 +313,10 @@ class Pair:
         else:
             try:
                 start = datetime.datetime.now() - datetime.timedelta(
-                    days=HISTORY_LIMIT[interval]) + datetime.timedelta(hours=16)
+                    days=YF_HISTORY_LIMIT[interval]) + datetime.timedelta(hours=16)
 
             except:
-                print(f'Try interval: {[interval for interval in HISTORY_LIMIT.keys()]}')
+                print(f'Try interval: {[interval for interval in YF_HISTORY_LIMIT.keys()]}')
                 return
         
         df = pd.DataFrame()
@@ -290,7 +333,7 @@ class Pair:
         end = start
 
         while end < today:
-            end = start + datetime.timedelta(days=REQUEST_LIMIT[interval])
+            end = start + datetime.timedelta(days=YF_REQUEST_LIMIT[interval])
             
             if not df.empty:
                 df = pd.concat([df, self.yfinance_fetch_ohlc(start, end)])
@@ -400,7 +443,8 @@ class Pair:
         i = 1
         while i < len(iter_dates): 
             interval = (iter_dates[i] - iter_dates[i-1]).total_seconds() / 3600
-            if interval <= TREND_TIME_LIMITS[self.interval]:
+            if interval <= TREND_TIME_LIMITS[self.interval] or \
+                    TREND_TIME_LIMITS[self.interval] == 0:
                 time_elapsed_col.append(interval)
                 date_col.append(iter_dates[i-1])
             i += 1
@@ -431,7 +475,8 @@ class Pair:
         i = 1
         while i < len(iter_dates):
             interval = (iter_dates[i] - iter_dates[i-1]).total_seconds() / 3600
-            if interval <= TREND_TIME_LIMITS[self.interval]:
+            if interval <= TREND_TIME_LIMITS[self.interval] or \
+                    TREND_TIME_LIMITS[self.interval] == 0:
                 percent_move = (iter_prices[i] - iter_prices[i-1])/iter_prices[i-1]*100
                 price_movement_col.append(percent_move)
                 date_col.append(iter_dates[i-1])
@@ -517,6 +562,7 @@ class Pair:
         fig.suptitle(f'{self.ticker}{self.interval}', fontsize=14)
         trend_movement_data = list(self.analyse_trend_movement(sma_length)['Price Movement'])
         trend_time_data = list(self.analyse_trend_time(sma_length)['Time Elapsed'])
+        # print(trend_movement_data, trend_time_data)
         # x is the % of a down trend following an up trend
         x = []
         x1 = []
@@ -575,12 +621,8 @@ class Pair:
 
 
 
-ticker = Ticker('BTC-USD')
+Ticker('ZW=F').update_data()
 
-# ticker.update_data()
-# print(ticker.tf_1m.find_trend_extrema(4))
-ticker.tf_1m.scatter_chart(5)
-ticker.tf_1m.hist_chart(5)
-# ticker.tf_1d.ohlc_chart(smas=[4],emas=[4], data_points=1500)
+print(f'------ Total Runtime: {(time.time()-start_time):.3f} seconds ------')
 
-plt.show()
+# plt.show()
