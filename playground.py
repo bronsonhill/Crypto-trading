@@ -2,20 +2,18 @@ import pandas as pd
 import numpy as np
 import datetime
 import json
+from binance import Client
+import os
      
-with open('Info/yf_ticker_names.json', 'r') as fp:
-     data = json.load(fp)
+print(10000//10000)
 
-log = dict()
-for ticker in data:
-     log[ticker] = "2023-01-11"
+client = Client(
+            api_key='FuaLBWg3iJCPTTQrU1yewim305sUVvZwOzO4Xau75JLHP0lTlpK9V7bdbPSBZOwF', 
+            api_secret='b8mt4w5PKu0gIvDoWHWSpGxdj8dWzesQ4RFCufcHf7l1D6LFMwQN2BAzyqN3lcTI'
+    )
 
-with open('Info/data_retrieval_log.json', 'w') as fp:
-     json.dump(log, fp)
-
-
-
-
+# timestamp = client._get_earliest_valid_timestamp('BTCUSDT', '1d')
+# print(datetime.datetime.fromtimestamp(timestamp/1000))
 
 # for importing ea trading data
 '''

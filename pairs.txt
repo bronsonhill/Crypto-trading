@@ -1,0 +1,1 @@
+exit order = 1 for entry /= 1.0001 or 0.9999
