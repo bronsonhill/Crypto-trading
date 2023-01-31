@@ -1,0 +1,23 @@
+{
+    "BTCUSDT": "Bitcoin / USDT Spot",
+    "ETHUSDT": "Ethereum / USDT Spot",
+    "SOLUSDT": "Solana / USDT Spot",
+    "LINKUSDT": "Chainlink / USDT Spot",
+    "BNBUSDT": "Binance Coin / USDT Spot",
+    "ETHBTC": "Ethereum / Bitcoin Spot",
+    "XRPBTC": "Ripple / Bitcoin Spot",
+    "LTCBUSD": "Litecoin / BUSD Spot",
+    "XRPUSDT": "Ripple / USDT Spot",
+    "DOGEUSDT": "Dogecoin / USDT Spot",
+    "SOLBTC": "Solana / Bitcoin Spot",
+    "BNBETH": "Binance Coin / Ethereum Spot",
+    "LTCUSDT": "Litecoin / USDT Spot",
+    "USDTDAI": "USDT / DAI Spot",
+    "BTCDAI": "Bitcoin / DAI Spot",
+    "SHIBUSDT": "Shiba Inu / USDT Spot",
+    "DOGEBTC": "Dogecoin / Bitcoin Spot",
+    "BUSDDAI": "BUSD / DAI Spot",
+    "PAXGUSDT": "Paxos Standard / USDT Spot",
+    "PAXGBUSD": "",
+    "BUSDVAI": "BUSD / VAI Spot"
+}
