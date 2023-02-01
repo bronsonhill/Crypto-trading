@@ -21,8 +21,16 @@ YF_REQUEST_LIMIT = {'1m': 7, '2m': 60, '5m': 60, '15m': 60, '30m': 60,
 '1h': 730, '1d': 730, '1wk': 10000, '1mo': 10000}
 
 # the minutes in each interval
-INTERVAL_MINUTES = {'1m': 1, '2m': 2, '5m': 5, '15m': 15, '30m': 30, 
+YF_INTERVAL_MINUTES = {'1m': 1, '2m': 2, '5m': 5, '15m': 15, '30m': 30, 
 '1h': 60, '1d': 1140, '1wk': 10080, '1mo': 43829}
+
+BINANCE_INTERVAL_MINUTES = {'1m': 1, '3m': 3, '5m': 5, '15m': 15, '30m': 30,
+ '1h': 60, '2h': 120, '4h': 240, '6h': 360, '8h': 480, '12h': 720, '1d': 1140,
+ '3d': 3420, '1w': 10080, '1M': 43829}
+
+BINANCE_HISTORY_LIMIT = {'1m': 2630000000, '3m': 3, '5m': 5, '15m': 15, '30m': 30,
+ '1h': 60, '2h': 120, '4h': 240, '6h': 360, '8h': 480, '12h': 720, '1d': 1140,
+ '3d': 3420, '1w': 10080, '1M': 43829}
 
 # the limits to trend time in hours - used to remove outliers
 TREND_TIME_LIMITS = {'1m': 5, '2m': 10, '5m': 20, '15m': 24, '30m': 48, 
@@ -83,34 +91,49 @@ def update_database(days=7):
     for ticker, date in data.items():
         date = datetime.datetime.strptime(date, "%Y-%m-%d")
         if (datetime.datetime.today() - date) >= days:
-            Ticker(ticker).update_data()
+            Pair(ticker, 'yf').update_data()
 
     return
 
 
-class Ticker:
-    def __init__(self, ticker):
+class Pair:
+    def __init__(self, ticker, source):
         self.ticker = ticker
-        self.tf_1m = Pair(ticker, '1m')
-        self.tf_2m = Pair(ticker, '2m')
-        self.tf_5m = Pair(ticker, '5m')
-        self.tf_15m = Pair(ticker, '15m')
-        self.tf_30m = Pair(ticker, '30m')
-        self.tf_1h = Pair(ticker, '1h')
-        self.tf_1d = Pair(ticker, '1d')
-        self.tf_1wk = Pair(ticker, '1wk')
-        self.tf = Pair(ticker, '1mo')
+        self.source = source
+        if source == 'yf':
+            self.tf_1m = Timeframe(ticker, '1m', source)
+            self.tf_2m = Timeframe(ticker, '2m', source)
+            self.tf_5m = Timeframe(ticker, '5m', source)
+            self.tf_15m = Timeframe(ticker, '15m', source)
+            self.tf_30m = Timeframe(ticker, '30m', source)
+            self.tf_1h = Timeframe(ticker, '1h', source)
+            self.tf_1d = Timeframe(ticker, '1d', source)
+            self.tf_1wk = Timeframe(ticker, '1wk', source)
+            self.tf_1mo = Timeframe(ticker, '1mo', source)
+            self.pairs = [self.tf_1m, self.tf_2m, self.tf_5m, self.tf_15m,
+                self.tf_30m, self.tf_1h, self.tf_1d, self.tf_1wk, self.tf_1mo]
+        
+        elif source == 'binance':
+            self.tf_1m = Timeframe(ticker, '1m', source)
+            self.tf_5m = Timeframe(ticker, '5m', source)
+            self.tf_15m = Timeframe(ticker, '15m', source)
+            self.tf_30m = Timeframe(ticker, '30m', source)
+            self.tf_1h = Timeframe(ticker, '1h', source)
+            self.tf_4h = Timeframe(ticker, '4h', source)
+            self.tf_1d = Timeframe(ticker, '1d', source)
+            self.tf_1w = Timeframe(ticker, '1w', source)
+            self.pairs = [self.tf_1m, self.tf_5m, self.tf_15m,
+                self.tf_30m, self.tf_1h, self.tf_4h, self.tf_1d, self.tf_1w]
+            return
     
     def update_data(self):
-        self.tf_1m.retrieve_data()
-        self.tf_2m.retrieve_data()
-        self.tf_5m.retrieve_data()
-        self.tf_15m.retrieve_data()
-        self.tf_30m.retrieve_data()
-        self.tf_1h.retrieve_data()
-        self.tf_1d.retrieve_data()
-        self.tf_1wk.retrieve_data()
-        self.tf.retrieve_data()
+        ''''''
+        if self.source == 'yf':
+            for pair in self.pairs:
+                pair.retrieve_data()
+        elif self.source == 'binance':
+            for pair in self.pairs:
+                pair.binance_fetch_ohlc()
 
         # stores date of data retrieval for future reference
         with open('Info/data_retrieval_log.json', 'r') as fp:
@@ -118,34 +141,41 @@ class Ticker:
             today = datetime.datetime.today().strftime("%Y-%m-%d")
             data[str(self.ticker)] = today
         with open('Info/data_retrieval_log.json', 'w') as fp:
-            json.dump(data, fp)
+            json.dump(data, fp, indent=4)
 
 
-class Pair:
-    def __init__(self, ticker, interval):
+class Timeframe:
+    def __init__(self, ticker: str, interval: str, source: str
+    , start_date: datetime=None, end_date: datetime=None):
         self.ticker = ticker
-        self. interval = interval
+        self.interval = interval
+        self.source = source
+        self.start_date = start_date
+        self.end_date = end_date
+
+        self.dir = f'../Price_data/{source}/{self.ticker}/{self.interval}.csv'
 
         # intialises ticker name
-        with open('Info/yf_ticker_names.json', 'r') as fp:
+        with open(f'Info/ticker_names_{source}.json', 'r') as fp:
             ticker_names = json.load(fp)
-            
             # in the case that it is recorded already
             if ticker in ticker_names:
                 self.ticker__name = ticker_names[ticker]
+            # in the case it needs to be specified by user
             else:
                 name = input(f'The ticker name for {ticker} has not yet been recorded. Enter the name you would like it to be recorded as: ')
+                # naxme = ''
                 ticker_names[ticker] = name
         
         # in the case it is not yet recorded
-        with open('Info/yf_ticker_names.json', 'w') as fp:
-            json.dump(ticker_names, fp)
-
-        self.dir = f'Price_data/{self.ticker}/{self.interval}.csv'
+        with open(f'Info/ticker_names_{source}.json', 'w') as fp:
+            json.dump(ticker_names, fp, indent=4)
     
 
     def __str__(self):
-        return self.ticker + ' ' + self.interval
+        string = f'Ticker: {self.ticker}\nInterval: {self.interval}\n\
+Source: {self.source}'
+        return string
     
     
     def yfinance_fetch_ohlc(self, start, end):
@@ -154,26 +184,63 @@ class Pair:
         df = ticker.history(start=start, end=end, interval=self.interval)
         return df
 
-    
-    def binance_fetch_ohlc(self, start):
+
+    def binance_fetch_ohlc(self):
+        '''fetches data from binance api'''
+        # create client instance
         client = Client(
             api_key='FuaLBWg3iJCPTTQrU1yewim305sUVvZwOzO4Xau75JLHP0lTlpK9V7bdbPSBZOwF', 
             api_secret='b8mt4w5PKu0gIvDoWHWSpGxdj8dWzesQ4RFCufcHf7l1D6LFMwQN2BAzyqN3lcTI'
     )
-        historical_data = client.get_historical_klines(self.ticker, 
-            self.interval, start)
-        
-        df = pd.DataFrame(historical_data, columns=['Datetime', 'Open', 
-        'High', 'Low', 'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
-        'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore'])
+        # determines start date according to whether data already exists in 
+        # database
+        file_exists = self.file_exists()
+        if file_exists:
+            # should not have to read csv
+            df = pd.read_csv(self.dir)
+            df.drop(df.tail(1).index, inplace=True)
+            timestamp = file_exists
+        else:
+            timestamp = client._get_earliest_valid_timestamp(self.ticker, self.interval)
+            df = pd.DataFrame(columns=['Datetime', 'Open', 'High', 'Low', 
+            'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
+            'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore'])
+            print(f'Retrieving data since {datetime.datetime.fromtimestamp(timestamp/1000)}')
 
-        df['Datetime'] = pd.to_datetime(df['Open Time']/1000, unit='s')
-        df['Close Time'] = pd.to_datetime(df['Close Time']/1000, unit='s')
+        start = timestamp
+        now = datetime.datetime.timestamp(datetime.datetime.now())*1000
+        # estimates time required to complete api request
+        requests_required = (now - timestamp) / 60000 / BINANCE_INTERVAL_MINUTES[self.interval] / 1000
+        # prevents redundant data requests
+        if requests_required < 0.05:
+            print(f'{requests_required:.2f} is not enough requests required. No data is being fetched')
+            return
+        print(f'{requests_required:.2f} requests required. Estimated time is {requests_required/75:.0f} minutes.')
+        requests_count = 0
+        # requests klines and stores in df until present time
+        while start < now:
+            bars = client.get_historical_klines(self.ticker, 
+                self.interval, str(start), limit=5000)
+            bars_df = pd.DataFrame(bars, columns=['Datetime', 'Open', 'High', 
+            'Low', 'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
+            'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore'])
+
+            bars_df['Datetime'] = pd.to_datetime(bars_df['Datetime'].astype(int)/1000, unit='s')
+            df = pd.concat([df,bars_df])
+            requests_count += 1
+            print(f'Progress: {requests_count/requests_required*100:.2f}% - ({requests_count}/{requests_required:.0f})')
+            if bars:
+                start = int(bars[-1][0]) + 1
+            else:
+                break
 
         numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume', 
             'Quote Asset Volume', 'TB Base Volume', 'TB Quote Volume']
         
         df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, axis=1)
+        df.drop('Close Time', 1)
+
+        df.to_csv(self.dir, index=False)
 
         return df
     
@@ -186,27 +253,41 @@ class Pair:
         if os.path.exists(dir):
             df = pd.read_csv(dir)
 
-            # determines the required datetime format
-            if self.interval in ['1d', '1wk', '1mo']:
-                format_str = "%Y-%m-%d"
+            # uses yf datetime format
+            if self.source == 'yf':
+                if self.interval in ['1d', '1wk', '1mo']:
+                    format_str = "%Y-%m-%d"
+                    recent_date = datetime.datetime.strptime(
+                    df.iloc[-2,0:1].values[0],format_str) + datetime.timedelta(hours=12)
+                    
+                    return recent_date
+
+                format_str = "%Y-%m-%d %H:%M:%S%z"
                 recent_date = datetime.datetime.strptime(
-                df.iloc[-2,0:1].values[0],format_str) + datetime.timedelta(hours=12)
-                
+                    df.iloc[-2,0:1].values[0],format_str)
+
+                # gives the time of most recent price data
                 return recent_date
+            
+            # uses binance datetime format
+            elif self.source == 'binance':
+                if self.interval in ['1d', '1w']:
+                    format_str = "%Y-%m-%d"
+                else:
+                    format_str = "%Y-%m-%d %H:%M:%S"
 
-            format_str = "%Y-%m-%d %H:%M:%S%z"
-            recent_date = datetime.datetime.strptime(
-                df.iloc[-2,0:1].values[0],format_str)
+                recent_date = datetime.datetime.strptime(df.iloc[-1,0:1].values[0], format_str)
+                recent_date = pytz.timezone('UTC').localize(recent_date)
 
-            # gives the time of most recent price data
+                return datetime.datetime.timestamp(recent_date) * 1000
 
-            return recent_date
-        
         else:
+            if not os.path.exists(f'Price_data/{self.source}/{self.ticker}'):
+                os.makedirs(f'Price_data/{self.source}/{self.ticker}')
             return False
 
 
-    def import_from_database(self, data_points=0):
+    def import_from_database(self, data_points: int=0):
         '''collects specified price data from database and returns it in
         pandas dataframe'''
         
@@ -214,6 +295,13 @@ class Pair:
         # imports csv to df
         df = pd.read_csv(dir, index_col=0, parse_dates=True)
         df.drop(df.columns[[4, 5, 6]], axis=1, inplace=True)
+        # uses start date if requested
+        if self.start_date is not None:
+            # index = df[df['Datetime']==self.start_date].index
+            df = df.loc[self.start_date:]
+        if self.end_date is not None:
+            # index = df[df['Datetime']==self.end_date].index
+            df = df.loc[:self.end_date]
         # shortens dataframe if requested
         if data_points:
             df = df.iloc[len(df)-data_points:len(df)]
@@ -309,10 +397,6 @@ class Pair:
         interval = self.interval
         dir = self.dir
 
-        # creates ticker folder if required
-        if not os.path.exists(f'Price_data/{ticker}'):
-            os.makedirs(f'Price_data/{ticker}')
-
         # sets start date of request according to whether file exists or not
         exist_bool = self.file_exists()
         if exist_bool:
@@ -385,7 +469,7 @@ class Pair:
         extrema_list += [(None, None)] * lower_i
         # records price extrema with the guide of ma extrema
         i = 1
-        while i < (len(extrema) - 1):
+        while i < len(extrema):
             extreme = extrema[i][1]
             extreme_i = extrema[i][0]
             upper_i = extrema[i][0]
@@ -431,8 +515,9 @@ class Pair:
             #     type='candle', style='mike', addplot=signal_plot,
             #     volume=False)
         
-        remaining_len = len(df.iloc[upper_i:])
-        extrema_list += [(None, None)] * (remaining_len)
+        trend_data = df.iloc[upper_i:]
+        extrema_list += [(None, None)] * (len(trend_data))
+
 
         return pd.DataFrame(extrema_list, columns=['Datetime', 'Extreme Price'])
 
@@ -556,7 +641,7 @@ class Pair:
         axs[0][0].hist(trend_movement_data, bins=bin_size(trend_movement_data))
         axs[0][0].set(xlabel='Price Movement (%)', ylabel='Frequency', title='Trend Price Movement Histogram')
 
-        axs[0][1].hist(trend_time_data, bins=bin_size(trend_time_data, INTERVAL_MINUTES[self.interval]/60))
+        axs[0][1].hist(trend_time_data, bins=bin_size(trend_time_data, YF_INTERVAL_MINUTES[self.interval]/60))
         axs[0][1].set(xlabel='Elasped Time (Hrs)', ylabel='Frequency', title='Trend Elapsed Time Histogram')
         
         axs[1][0].plot(trend_movement_data)
@@ -628,9 +713,14 @@ class Pair:
 
         return
 
-    
+# for pair in ['BUSDVAI']:
+#     Pair(pair, 'binance').update_data()
 
+# update_database()
 
+Pair('PAXGUSDT', 'binance').tf_1h.scatter_chart(3)
 
+runtime = time.time()-start_time
+print(f'------ Total Runtime: {(time.time()-start_time)/60:.2f} minutes ------')
 
-print(f'------ Total Runtime: {(time.time()-start_time):.3f} seconds ------')
+plt.show()
