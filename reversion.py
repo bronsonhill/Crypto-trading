@@ -36,7 +36,6 @@ def refresh_key_data():
 
 refresh_key_data()
 
-
 def calculate_initial_levels(midpoint=MIDPOINT, lower_range=LOWER_RANGE, upper_range=UPPER_RANGE):
     '''calculates the initial positon order levels and returns a list of
     them in descending order of their distance from the midpoint'''
@@ -59,7 +58,7 @@ def initialise_orders():
     # then places maker orders around range parameters
     for price in calculate_initial_levels():
         price = price/10000
-        if price in order_df['price'] and 
+        # if price in order_df['price'] and 
         quantity = int(total_bal/(UPPER_RANGE-LOWER_RANGE))
         quantity = abs(price - 1)
         
