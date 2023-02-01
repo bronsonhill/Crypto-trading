@@ -20,6 +20,5 @@
     "NG=F": "Natural Gas / USD",
     "USDAUD=X": "USDAUD",
     "XRP-USD": "Ripple / USD",
-    "ZC=F": "Corn / USD",
-    "SOLUSDT": "/opt/anaconda3/bin/python \"/Users/home/Library/Mobile Documents/com~apple~CloudDocs/Estate/Trading/main.py\""
+    "ZC=F": "Corn / USD"
 }

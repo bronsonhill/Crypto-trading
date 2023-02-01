@@ -1,0 +1,23 @@
+{
+    "BTCUSDT": ["Bitcoin / USDT Spot", "2023-01-12"],
+    "ETHUSDT": ["Ethereum / USDT Spot", "2023-01-24"],
+    "SOLUSDT": ["Solana / USDT Spot", "2023-01-12"],
+    "LINKUSDT": ["Chainlink / USDT Spot", "2023-01-12"],
+    "BNBUSDT": ["Binance Coin / USDT Spot", "2023-01-12"],
+    "ETHBTC": ["Ethereum / Bitcoin Spot", "2023-01-12"],
+    "XRPBTC": ["Ripple / Bitcoin Spot", "2023-01-12"],
+    "LTCBUSD": ["Litecoin / BUSD Spot", "2023-01-12"],
+    "XRPUSDT": ["Ripple / USDT Spot", "2023-01-12"],
+    "DOGEUSDT": ["Dogecoin / USDT Spot", "2023-01-12"],
+    "SOLBTC": ["Solana / Bitcoin Spot", "2023-01-12"],
+    "BNBETH": ["Binance Coin / Ethereum Spot", "2023-01-13"],
+    "LTCUSDT": ["Litecoin / USDT Spot"],
+    "USDTDAI": ["USDT / DAI Spot", "2023-01-17"],
+    "BTCDAI": ["Bitcoin / DAI Spot", "2023-01-18"],
+    "SHIBUSDT": ["Shiba Inu / USDT Spot", "2023-01-18"],
+    "DOGEBTC": ["Dogecoin / Bitcoin Spot", "2023-01-18"],
+    "BUSDDAI": ["BUSD / DAI Spot", "2023-01-18"],
+    "PAXGUSDT": ["Paxos Standard / USDT Spot", "2023-01-18"],
+    "PAXGBUSD": ["Paxos Standard / BUSD Spot", "2023-01-18"],
+    "BUSDVAI": ["BUSD / VAI Spot", "2023-01-24"]
+}

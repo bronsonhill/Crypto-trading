@@ -84,14 +84,34 @@ def remove_outliers(series, deviations=3):
 def update_database(days=7):
     '''Retrieves all Ticker data that has not been updated in specified 
     number of days'''
+    # days required since last update
     days = datetime.timedelta(days=days)
-    with open('Info/data_retrieval_log.json', 'r') as fp:
+    
+    # binance data
+    with open('Info/log_binance.json', 'r') as fp:
         data = json.load(fp)
 
-    for ticker, date in data.items():
-        date = datetime.datetime.strptime(date, "%Y-%m-%d")
-        if (datetime.datetime.today() - date) >= days:
-            Pair(ticker, 'yf').update_data()
+    for ticker, lst in data.items():
+        # exception in the case that an update date has not been logged
+        try: 
+            date = datetime.datetime.strptime(lst[1], "%Y-%m-%d")
+            if (datetime.datetime.today() - date) >= days:
+                Pair(ticker, 'binance').update_data()
+        except: 
+            Pair(ticker, 'binance').update_data()
+
+    # yahoo data
+    with open('Info/yahoo.json', 'r') as fp:
+        data = json.load(fp)
+
+    for ticker, lst in data.items():
+        # exception in the case that an update date has not been logged
+        try: 
+            date = datetime.datetime.strptime(lst[1], "%Y-%m-%d")
+            if (datetime.datetime.today() - date) >= days:
+                Pair(ticker, 'yahoo').update_data()
+        except: 
+            Pair(ticker, 'yahoo').update_data()
 
     return
 
@@ -100,7 +120,7 @@ class Pair:
     def __init__(self, ticker, source):
         self.ticker = ticker
         self.source = source
-        if source == 'yf':
+        if source == 'yahoo':
             self.tf_1m = Timeframe(ticker, '1m', source)
             self.tf_2m = Timeframe(ticker, '2m', source)
             self.tf_5m = Timeframe(ticker, '5m', source)
@@ -128,19 +148,21 @@ class Pair:
     
     def update_data(self):
         ''''''
-        if self.source == 'yf':
+        if self.source == 'yahoo':
             for pair in self.pairs:
-                pair.retrieve_data()
+                pair.yahoo_fetch_ohlc()
+            log_name = 'yahoo'
         elif self.source == 'binance':
             for pair in self.pairs:
                 pair.binance_fetch_ohlc()
+            log_name = 'binance'
 
         # stores date of data retrieval for future reference
-        with open('Info/data_retrieval_log.json', 'r') as fp:
+        with open(f'Info/{log_name}_log.json', 'r') as fp:
             data = json.load(fp)
             today = datetime.datetime.today().strftime("%Y-%m-%d")
             data[str(self.ticker)] = today
-        with open('Info/data_retrieval_log.json', 'w') as fp:
+        with open(f'Info/{log_name}_log.json', 'w') as fp:
             json.dump(data, fp, indent=4)
 
 
@@ -391,7 +413,7 @@ Source: {self.source}'
         return series
 
 
-    def retrieve_data(self):
+    def yahoo_fetch_ohlc(self):
         '''adds requested data to price data folder as csv'''
         ticker = self.ticker
         interval = self.interval
@@ -718,7 +740,7 @@ Source: {self.source}'
 
 # update_database()
 
-Pair('PAXGUSDT', 'binance').tf_1h.scatter_chart(3)
+Pair('PAXGUSDT', 'binance').tf_1h.scatter_chart(15)
 
 runtime = time.time()-start_time
 print(f'------ Total Runtime: {(time.time()-start_time)/60:.2f} minutes ------')

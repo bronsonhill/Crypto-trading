@@ -18,6 +18,6 @@
     "DOGEBTC": "Dogecoin / Bitcoin Spot",
     "BUSDDAI": "BUSD / DAI Spot",
     "PAXGUSDT": "Paxos Standard / USDT Spot",
-    "PAXGBUSD": "",
+    "PAXGBUSD": "Paxos Standard / BUSD Spot",
     "BUSDVAI": "BUSD / VAI Spot"
 }
