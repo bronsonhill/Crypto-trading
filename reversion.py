@@ -3,6 +3,7 @@ from binance.enums import *
 from binance.helpers import round_step_size
 import datetime
 import pandas as pd
+import json
 from time import sleep
 
 CLIENT = Client(
@@ -36,59 +37,72 @@ def refresh_key_data():
 
 refresh_key_data()
 
-def calculate_initial_levels(midpoint=MIDPOINT, lower_range=LOWER_RANGE, upper_range=UPPER_RANGE):
-    '''calculates the initial positon order levels and returns a list of
+def position_levels(midpoint=MIDPOINT, lower_range=LOWER_RANGE, upper_range=UPPER_RANGE):
+    '''calculates positon order levels and returns a list of
     them in descending order of their distance from the midpoint'''
     level_list = []
     for level in range(LOWER_RANGE, UPPER_RANGE, 1):
         level_list.append(level)
-    
+
+    # sorts levels according to their distance from the midpoint
     level_list.sort(key=lambda x: abs(x-10000))
     return level_list
 
 
-def initialise_orders():
-    '''Places orders to setup reversion strategy'''
-    # begins by assessing open orders
-    existing_orders = CLIENT.get_all_orders(symbol=SYMBOL)
-    order_df = pd.DataFrame(columns=['orderId', 'side', 'price', 'type'])
-    # for order in existing_orders:
-        
+def initialise_position_orders():
+    '''Places position orders to setup reversion strategy
+    1. Gets position levels
+    2. Checks a position order does not currently exist
+    3. Determines direction of position order
+    4. Checks the order price is within the orderbook'''
+    
+    # assesses open position orders and records their price levels
+    with open('open_orders.json', 'r') as fp:
+        open_orders = json.load(fp)
 
-    # then places maker orders around range parameters
-    for price in calculate_initial_levels():
+    open_order_prices = []
+    for order in open_orders:
+        if order['exit_order'] == False:
+            open_order_prices.append(order['price'])
+
+    # then places maker orders around range parameters when required
+    for price in position_levels():
         price = price/10000
-        # if price in order_df['price'] and 
-        quantity = int(total_bal/(UPPER_RANGE-LOWER_RANGE))
-        quantity = abs(price - 1)
+        # checks if there is already a position order open at price level
+        if price not in open_order_prices:
+            quantity = int(total_bal/(UPPER_RANGE-LOWER_RANGE))
+            quantity = abs(price - 1)
+            # sets sell orders above midpoint and disallows a taker order
+            if price > MIDPOINT//10000 and price >= float(orderbook['askPrice']):
+                # ensures balance is available
+                if base_asset_balance >= quantity:
+                    CLIENT.create_order(
+                        symbol=SYMBOL,
+                        side=SIDE_SELL,
+                        type=ORDER_TYPE_LIMIT,
+                        timeInForce=TIME_IN_FORCE_GTC,
+                        quantity=quantity,
+                        price=price
+                        )
+                else:
+                    print('INSUFFICIENT BALANCE')
+                    return
         
-        # sets sell orders above midpoint and disallows a taker order
-        if price > MIDPOINT//10000 and price >= float(orderbook['askPrice']):
-            if base_asset_balance >= quantity:
-                CLIENT.create_order(
-                    symbol=SYMBOL,
-                    side=SIDE_SELL,
-                    type=ORDER_TYPE_LIMIT,
-                    timeInForce=TIME_IN_FORCE_GTC,
-                    quantity=quantity,
-                    price=price
-                    )
-            else: 
-                return
-        
-        # sets buy orders below midpoint and disallows a taker order
-        elif price < MIDPOINT//10000 and price <= float(orderbook['bidPrice']):
-            if quote_asset_balance >= quantity:
-                CLIENT.create_order(
-                    symbol=SYMBOL,
-                    side=SIDE_BUY,
-                    type=ORDER_TYPE_LIMIT,
-                    timeInForce=TIME_IN_FORCE_GTC,
-                    quantity=quantity,
-                    price=price
-                    )
-            else:
-                return
+            # sets buy orders below midpoint and disallows a taker order
+            elif price < MIDPOINT//10000 and price <= float(orderbook['bidPrice']):
+                # ensures balance is available
+                if quote_asset_balance >= quantity:
+                    CLIENT.create_order(
+                        symbol=SYMBOL,
+                        side=SIDE_BUY,
+                        type=ORDER_TYPE_LIMIT,
+                        timeInForce=TIME_IN_FORCE_GTC,
+                        quantity=quantity,
+                        price=price
+                        )
+                else:
+                    print('INSUFFICIENT BALANCE')
+                    return
     return
 
 
@@ -141,7 +155,7 @@ def place_exit_order():
             price=price
             )
 
-    initialise_orders()
+    initialise_position_orders()
     standby(int(filled_order['Time']))
 
     return 

@@ -4,27 +4,17 @@ import datetime
 import json
 from binance import Client
 import os
-     
-print(10000//10000)
 
 client = Client(
             api_key='FuaLBWg3iJCPTTQrU1yewim305sUVvZwOzO4Xau75JLHP0lTlpK9V7bdbPSBZOwF', 
             api_secret='b8mt4w5PKu0gIvDoWHWSpGxdj8dWzesQ4RFCufcHf7l1D6LFMwQN2BAzyqN3lcTI'
     )
 
-# timestamp = client._get_earliest_valid_timestamp('BTCUSDT', '1d')
-# print(datetime.datetime.fromtimestamp(timestamp/1000))
+open_orders = []
+order_details = client.get_all_orders(symbol='BUSDDAI')
+for order in order_details:
+     if order['status'] == 'NEW':
+          open_orders.append(order)
 
-# for importing ea trading data
-'''
-dir = 'Price_data/ADownloads/BRENTCMDUSD_M1.csv'
-df = pd.read_csv(dir)
-df.columns = ['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']
-
-df['Datetime'] = [datetime.datetime.strptime(x, "%Y-%m-%d %H:%M")
-     for x in df['Datetime']]
-
-# df['Datetime'] = df['Datetime'].dt.tz_localize('GMT').dt.tz_convert('EST')
-df['Datetime'] = df['Datetime'].dt.tz_localize('EST')
-
-df.to_csv('Price_data/ADownloads/new.csv', index=False)'''
+with open('open_orders.json', 'w') as fp:
+     json.dump(open_orders, fp, indent=4)
