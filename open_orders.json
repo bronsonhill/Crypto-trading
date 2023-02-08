@@ -43,7 +43,7 @@
         "workingTime": 1674114069985,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     },
     {
         "symbol": "BUSDDAI",
@@ -66,7 +66,7 @@
         "workingTime": 1674724469932,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     },
     {
         "symbol": "BUSDDAI",
@@ -89,7 +89,7 @@
         "workingTime": 1674724476993,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     },
     {
         "symbol": "BUSDDAI",
@@ -112,7 +112,7 @@
         "workingTime": 1674947807675,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": true
+        "exitOrder": true
     },
     {
         "symbol": "BUSDDAI",
@@ -135,7 +135,7 @@
         "workingTime": 1674983136127,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     },
     {
         "symbol": "BUSDDAI",
@@ -158,7 +158,7 @@
         "workingTime": 1674983142328,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     },
     {
         "symbol": "BUSDDAI",
@@ -181,6 +181,6 @@
         "workingTime": 1675119931956,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     }
 ]
