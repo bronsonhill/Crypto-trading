@@ -20,7 +20,7 @@
         "workingTime": 1674114069388,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exit_order": false
+        "exitOrder": false
     },
     {
         "symbol": "BUSDDAI",
