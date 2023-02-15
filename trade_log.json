@@ -1,0 +1,24 @@
+[
+    {
+        "symbol": "BUSDDAI",
+        "orderId": 14196430,
+        "orderListId": -1,
+        "clientOrderId": "web_faa5b02ed3cf406e840696156a751d68",
+        "price": "0.99990000",
+        "origQty": "20.00000000",
+        "executedQty": "20.00000000",
+        "cummulativeQuoteQty": "19.99800000",
+        "status": "FILLED",
+        "timeInForce": "GTC",
+        "type": "LIMIT",
+        "side": "BUY",
+        "stopPrice": "0.00000000",
+        "icebergQty": "0.00000000",
+        "time": 1675925868962,
+        "updateTime": 1675995616159,
+        "isWorking": true,
+        "workingTime": 1675925868962,
+        "origQuoteOrderQty": "0.00000000",
+        "selfTradePreventionMode": "NONE"
+    }
+]

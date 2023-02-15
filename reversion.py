@@ -4,6 +4,7 @@ from binance.helpers import round_step_size
 import datetime
 import pandas as pd
 import json
+import pytz
 from time import sleep
 
 CLIENT = Client(
@@ -31,6 +32,7 @@ def refresh_key_data():
     quote_asset_balance = CLIENT.get_asset_balance(asset=QUOTE_ASSET)
     global total_bal
     total_bal = float(base_asset_balance['free']) + float(quote_asset_balance['free'])
+    total_bal = 200
     global orderbook
     orderbook = CLIENT.get_orderbook_tickers(SYMBOL)
     return
@@ -41,7 +43,7 @@ def position_levels(midpoint=MIDPOINT, lower_range=LOWER_RANGE, upper_range=UPPE
     '''calculates positon order levels and returns a list of
     them in descending order of their distance from the midpoint'''
     level_list = []
-    for level in range(LOWER_RANGE, UPPER_RANGE, 1):
+    for level in range(LOWER_RANGE, UPPER_RANGE+1, 1):
         level_list.append(level)
 
     # sorts levels according to their distance from the midpoint
@@ -49,56 +51,113 @@ def position_levels(midpoint=MIDPOINT, lower_range=LOWER_RANGE, upper_range=UPPE
     return level_list
 
 
+def log_trade(exitOrder, orderId=None, order=False):
+    '''saves given order (of orderId) to open_orders.json'''
+    # retrieves specified order details when required
+    if not order:
+        order = CLIENT.get_order(
+            symbol=SYMBOL, 
+            orderId=orderId)
+
+    order['exitOrder'] = exitOrder
+    # gets existing data
+    with open("open_orders.json", 'r') as fp:
+        open_orders = json.load(fp)
+    open_orders.append(order)
+    # saves new data
+    with open("open_orders.json", 'w') as fp:
+        json.dump(open_orders, fp, indent=4)
+
+    return
+
+
 def initialise_position_orders():
     '''Places position orders to setup reversion strategy
     1. Gets position levels
     2. Checks a position order does not currently exist
     3. Determines direction of position order
-    4. Checks the order price is within the orderbook'''
+    4. Checks the order price is within the orderbook
+    5. Skips the price level if there is a pending exit order'''
     
     # assesses open position orders and records their price levels
     with open('open_orders.json', 'r') as fp:
         open_orders = json.load(fp)
 
     open_order_prices = []
+    buy_exit_count = 0
+    sell_exit_count = 0
     for order in open_orders:
-        if order['exit_order'] == False:
+        if not order['exitOrder']:
             open_order_prices.append(order['price'])
+        else:
+            if order['side'] == 'BUY':
+                buy_exit_count += 1
+            else:
+                sell_exit_count += 1
 
     # then places maker orders around range parameters when required
-    for price in position_levels():
+    position_level_list = position_levels()
+    for price in position_level_list:
+        refresh_key_data()
         price = price/10000
         # checks if there is already a position order open at price level
-        if price not in open_order_prices:
-            quantity = int(total_bal/(UPPER_RANGE-LOWER_RANGE))
-            quantity = abs(price - 1)
+        if price not in [round_step_size(x, 0.0001) for x in open_order_prices]:
+            # records time to retrieve and save order details
+            start_time = int(datetime.datetime.timestamp(datetime.datetime.now(pytz.timezone('UTC'))) * 1000)
+            # quantity/size calculation
+            quantity = round_step_size(int(total_bal/(len(position_level_list)-1)), 0.01)
             # sets sell orders above midpoint and disallows a taker order
-            if price > MIDPOINT//10000 and price >= float(orderbook['askPrice']):
+            if price > MIDPOINT//10000 and price > float(orderbook['bidPrice']):
                 # ensures balance is available
-                if base_asset_balance >= quantity:
-                    CLIENT.create_order(
-                        symbol=SYMBOL,
-                        side=SIDE_SELL,
-                        type=ORDER_TYPE_LIMIT,
-                        timeInForce=TIME_IN_FORCE_GTC,
-                        quantity=quantity,
-                        price=price
-                        )
+                if float(base_asset_balance['free']) >= quantity:
+                    # skips level if there is a pending exit order
+                    if buy_exit_count > 0:
+                        buy_exit_count -= 1
+                    else:
+                        # creates and submits order
+                        CLIENT.create_order(
+                            symbol=SYMBOL,
+                            side=SIDE_SELL,
+                            type=ORDER_TYPE_LIMIT,
+                            timeInForce=TIME_IN_FORCE_GTC,
+                            quantity=quantity,
+                            price=price
+                            )
+                        # logs new trade
+                        log_trade(
+                            exitOrder=False, 
+                            order=CLIENT.get_all_orders(
+                                symbol=SYMBOL, 
+                                startTime=start_time
+                            )[0]
+                    )
                 else:
                     print('INSUFFICIENT BALANCE')
                     return
         
             # sets buy orders below midpoint and disallows a taker order
-            elif price < MIDPOINT//10000 and price <= float(orderbook['bidPrice']):
+            elif price < MIDPOINT//10000 and price < float(orderbook['askPrice']):
                 # ensures balance is available
-                if quote_asset_balance >= quantity:
-                    CLIENT.create_order(
-                        symbol=SYMBOL,
-                        side=SIDE_BUY,
-                        type=ORDER_TYPE_LIMIT,
-                        timeInForce=TIME_IN_FORCE_GTC,
-                        quantity=quantity,
-                        price=price
+                if float(quote_asset_balance['free']) >= quantity:
+                    # skips level if there is a pending exit order
+                    if sell_exit_count > 0:
+                        sell_exit_count -= 1
+                    else:
+                        CLIENT.create_order(
+                            symbol=SYMBOL,
+                            side=SIDE_BUY,
+                            type=ORDER_TYPE_LIMIT,
+                            timeInForce=TIME_IN_FORCE_GTC,
+                            quantity=quantity,
+                            price=price
+                            )
+                        # logs new trade
+                        log_trade(
+                            exitOrder=False, 
+                            order=CLIENT.get_all_orders(
+                                symbol=SYMBOL, 
+                                startTime=start_time
+                            )[0]
                         )
                 else:
                     print('INSUFFICIENT BALANCE')
@@ -106,26 +165,52 @@ def initialise_position_orders():
     return
 
 
-def standby(startTime=0, refresh_time=1):
+def standby(refresh_time=1):
     '''returns orders that have been filled'''
-    
+
     while True:
         sleep(refresh_time)
+        print('Watching orders')
 
-        all_orders = CLIENT.get_all_orders(
-            symbol=SYMBOL, 
-            startTime=startTime)
+        with open("open_orders.json", 'r') as fp:
+            open_orders = json.load(fp)
         
-        for order in all_orders:
-            order_id = order['orderId']
-            if order['status'] == 'FILLED':
-                return order
+        i = 0
+        for order in open_orders:
+            current_order_details = CLIENT.get_order(
+                symbol=SYMBOL,
+                orderId=order['orderId'])
+            # removes from open orders json
+            if current_order_details['status'] == 'FILLED':
+                print('Order filled')
+                open_orders.pop(i)
+                with open("open_orders.json", 'w') as fp:
+                    json.dump(open_orders, fp, indent=4)
+                # places exit order if recently filled order is not an exit order
+                if not order['exitOrder']:
+                    place_exit_order(order)
+                    with open("trade_log.json", 'r') as fp:
+                        trade_log = json.load(fp)
+                    trade_log.append(current_order_details)
+                    with open("trade_log.json", 'w') as fp:
+                        json.dump(trade_log, fp, indent=4)
+                    return
+                # otherwise places position order
+                else:
+                    initialise_position_orders()
+                    with open("trade_log.json", 'r') as fp:
+                        trade_log = json.load(fp)
+                    trade_log.append(current_order_details)
+                    with open("trade_log.json", 'w') as fp:
+                        json.dump(trade_log, fp, indent=4)
+                    return
+                    
+            i += 1
+        print('...')
+                
 
-
-def place_exit_order():
+def place_exit_order(filled_order):
     '''places an exit trade according to the inputted filled trade'''
-
-    filled_order = standby()
     
     # determines side of exit trade
     if filled_order['side'] == SIDE_BUY:
@@ -133,18 +218,12 @@ def place_exit_order():
     else:
         side = SIDE_BUY
     
-    # determines price of exit trade
-    if float(filled_order['price']) == 1.0001:
-        price = 0.9999
-    elif float(filled_order['price']) == 0.9999:
-        price = 1.0001
-    elif float(filled_order['price']) > 1.0001:
-        price = 1
-    elif float(filled_order['price']) < 0.9999:
-        price = 1
+    price = MIDPOINT/10000
     
+    # records time to log new order 
+    start_time = int(datetime.datetime.timestamp(datetime.datetime.now(pytz.timezone('UTC'))) * 1000)
     # determines quantity of exit trade
-    quantity = float(filled_order['quantity'])
+    quantity = float(filled_order['origQty'])
 
     CLIENT.create_order(
             symbol=SYMBOL,
@@ -154,8 +233,16 @@ def place_exit_order():
             quantity=quantity,
             price=price
             )
-
-    initialise_position_orders()
-    standby(int(filled_order['Time']))
+    
+    log_trade(
+        exitOrder=True, 
+        order=CLIENT.get_all_orders(
+            symbol=SYMBOL, 
+            startTime=start_time
+            )[0]
+        )
 
     return 
+
+
+standby()
