@@ -6,11 +6,15 @@ import pandas as pd
 import json
 import pytz
 from time import sleep
+from pushover_complete import PushoverAPI
 
 CLIENT = Client(
             api_key='FuaLBWg3iJCPTTQrU1yewim305sUVvZwOzO4Xau75JLHP0lTlpK9V7bdbPSBZOwF', 
             api_secret='b8mt4w5PKu0gIvDoWHWSpGxdj8dWzesQ4RFCufcHf7l1D6LFMwQN2BAzyqN3lcTI'
     )
+
+
+api = PushoverAPI("ai2w3cjw17p8esx54eufpdrm9g82ej")
 
 # parameters
 MIDPOINT = 10000
@@ -19,6 +23,7 @@ LOWER_RANGE = 9995
 SYMBOL = 'BUSDDAI'
 BASE_ASSET = 'BUSD'
 QUOTE_ASSET = 'DAI'
+ONLY_MAKER = True
 
 
 order_type = {'id': 'position'}
@@ -30,14 +35,17 @@ def refresh_key_data():
     base_asset_balance = CLIENT.get_asset_balance(asset=BASE_ASSET)
     global quote_asset_balance
     quote_asset_balance = CLIENT.get_asset_balance(asset=QUOTE_ASSET)
+    global total_free_bal
+    total_free_bal = float(base_asset_balance['free']) + float(quote_asset_balance['free'])
+    total_free_bal = 1000
     global total_bal
-    total_bal = float(base_asset_balance['free']) + float(quote_asset_balance['free'])
-    total_bal = 200
+    total_bal = total_free_bal + float(base_asset_balance['free'])
     global orderbook
     orderbook = CLIENT.get_orderbook_tickers(SYMBOL)
     return
 
 refresh_key_data()
+
 
 def position_levels(midpoint=MIDPOINT, lower_range=LOWER_RANGE, upper_range=UPPER_RANGE):
     '''calculates positon order levels and returns a list of
@@ -73,9 +81,9 @@ def log_trade(exitOrder, orderId=None, order=False):
 
 def initialise_position_orders():
     '''Places position orders to setup reversion strategy
-    1. Gets position levels
-    2. Checks a position order does not currently exist
-    3. Determines direction of position order
+    1. Gets open position order levels
+    2. Checks a position order does not currently exist at a given level
+    3. Determines the correct direction of position order
     4. Checks the order price is within the orderbook
     5. Skips the price level if there is a pending exit order'''
     
@@ -105,7 +113,7 @@ def initialise_position_orders():
             # records time to retrieve and save order details
             start_time = int(datetime.datetime.timestamp(datetime.datetime.now(pytz.timezone('UTC'))) * 1000)
             # quantity/size calculation
-            quantity = round_step_size(int(total_bal/(len(position_level_list)-1)), 0.01)
+            quantity = round_step_size(int(total_free_bal/(len(position_level_list)-1)), 0.01)
             # sets sell orders above midpoint and disallows a taker order
             if price > MIDPOINT//10000 and price > float(orderbook['bidPrice']):
                 # ensures balance is available
@@ -183,6 +191,7 @@ def standby(refresh_time=1):
             # removes from open orders json
             if current_order_details['status'] == 'FILLED':
                 print('Order filled')
+                api.send_message("uw1rwwrqhzfi9hai19gdt9bkgjq8as", SYMBOL, device="iPhone", title=f"{order['side']} order filled: {order['origQty']} @{order['price']}")
                 open_orders.pop(i)
                 with open("open_orders.json", 'w') as fp:
                     json.dump(open_orders, fp, indent=4)
@@ -194,7 +203,7 @@ def standby(refresh_time=1):
                     trade_log.append(current_order_details)
                     with open("trade_log.json", 'w') as fp:
                         json.dump(trade_log, fp, indent=4)
-                    return
+                    
                 # otherwise places position order
                 else:
                     initialise_position_orders()
@@ -203,7 +212,7 @@ def standby(refresh_time=1):
                     trade_log.append(current_order_details)
                     with open("trade_log.json", 'w') as fp:
                         json.dump(trade_log, fp, indent=4)
-                    return
+                    
                     
             i += 1
         print('...')
@@ -244,5 +253,5 @@ def place_exit_order(filled_order):
 
     return 
 
-
+initialise_position_orders()
 standby()

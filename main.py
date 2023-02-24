@@ -96,7 +96,8 @@ def update_database(days=7):
         try: 
             date = datetime.datetime.strptime(lst[1], "%Y-%m-%d")
             if (datetime.datetime.today() - date) >= days:
-                Pair(ticker, 'binance').update_data()
+                pair = Pair(ticker, 'binance')
+                pair.update_data()
         except: 
             Pair(ticker, 'binance').update_data()
 
@@ -228,7 +229,7 @@ Source: {self.source}'
             'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
             'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore'])
             print(f'Retrieving data since {datetime.datetime.fromtimestamp(timestamp/1000)}')
-
+        print(f'Requesting data for {self.ticker} {self.interval}')
         start = timestamp
         now = datetime.datetime.timestamp(datetime.datetime.now())*1000
         # estimates time required to complete api request
@@ -735,14 +736,28 @@ Source: {self.source}'
 
         return
 
+
+    def reversion(self, sma_length_trend, sma_length_midpoint):
+        '''Analyses the parameters of a simple reversion strategy and
+        returns statistics and visualisations'''
+
+        distance_list = []
+        for price, sma in self.import_from_database(), self.sma_data():
+            if price['open'] > sma:
+                distance_list.append(price['high'] - sma)
+            else:
+                distance_list.append(price['low'] - sma)
+
+
+
 # for pair in ['BUSDVAI']:
 #     Pair(pair, 'binance').update_data()
 
-# update_database()
+update_database()
 
-Pair('PAXGUSDT', 'binance').tf_1h.scatter_chart(15)
+# Pair('PAXGUSDT', 'binance').tf_1h.scatter_chart(15)
 
 runtime = time.time()-start_time
 print(f'------ Total Runtime: {(time.time()-start_time)/60:.2f} minutes ------')
 
-plt.show()
+# plt.show()
