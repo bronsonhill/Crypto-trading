@@ -162,7 +162,9 @@ class Pair:
         with open(f'Info/{log_name}_log.json', 'r') as fp:
             data = json.load(fp)
             today = datetime.datetime.today().strftime("%Y-%m-%d")
-            data[str(self.ticker)] = today
+            key_pair = data[str(self.ticker)]
+            key_pair[1] = today
+            data[str(self.ticker)] = key_pair
         with open(f'Info/{log_name}_log.json', 'w') as fp:
             json.dump(data, fp, indent=4)
 
@@ -737,27 +739,88 @@ Source: {self.source}'
         return
 
 
-    def reversion(self, sma_length_trend, sma_length_midpoint):
+    def test_reversion(self, sma_length_trend, sma_length_midpoint, data_points=0):
         '''Analyses the parameters of a simple reversion strategy and
         returns statistics and visualisations'''
+        # replicated parameters
+        upper_multiple = 1200
+        lower_multiple = 800
+        num_orders = 8
 
+        # generates a list of the percentage distance from price levels
+        open_position_levels_perc = []
+        order_distance = (upper_multiple - lower_multiple) / num_orders
+        for num in range(lower_multiple, upper_multiple+1, int(order_distance)):
+            open_position_levels_perc.append(num/1000)
+
+        open_position_levels_perc.sort(key=lambda x: abs(1-x))
+        
+        # generates a list of the prices distance from an sma
         distance_list = []
-        for price, sma in self.import_from_database(), self.sma_data():
-            if price['open'] > sma:
-                distance_list.append(price['high'] - sma)
+        indexes_and_directions = []
+        sma_data = self.sma_data(sma_length_midpoint, data_points).items()
+        price_data = self.averaged_price(data_points).values.tolist()
+        for i in range(len(price_data)-1):
+            sma = next(sma_data)
+            open_position_levels = [x*price_data[i][0] for x in open_position_levels_perc]
+            for level in open_position_levels:
+                if price_data[i][-1] < level and price_data[i + 1][-1] > level:
+                    # Append the index and the direction "up" to the list
+                    indexes_and_directions.append((i, "up"))
+                elif price_data[i][-1] > level and price_data[i + 1][-1] < level:
+                    # Append the index and the direction "down" to the list
+                    indexes_and_directions.append((i, "down"))
+        
+        print(indexes_and_directions)
+            
+        '''
+            if price[1][1] > sma[1]:
+                diff = price[1][2] - sma[1]
+                perc_diff = diff/sma[1]
+                distance_list.append(perc_diff)
+                
             else:
-                distance_list.append(price['low'] - sma)
+                diff = price[1][3] - sma[1]
+                perc_diff = diff/sma[1]
+                distance_list.append(perc_diff)
+            
 
 
+        levels = find_crossing_indexes(distance_list, open_position_levels_perc)
 
-# for pair in ['BUSDVAI']:
-#     Pair(pair, 'binance').update_data()
+        # plots the continous percentage difference from an sma of specified length
+        fig, axes = plt.subplots()
+        axes.set(xlabel='Datetime', 
+                 ylabel=f'% difference from {sma_length_midpoint}SMA', 
+                 title=f'Mean reversion {self.ticker}')
+        plt.plot(price_data.index, distance_list)
+        # self.ohlc_chart(smas=[60], data_points=data_points)'''
 
-update_database()
+        return distance_list
 
-# Pair('PAXGUSDT', 'binance').tf_1h.scatter_chart(15)
+def find_crossing_indexes(data, levels):
+  ''''''
+  # Initialize an empty list to store the indexes and directions
+  indexes_and_directions = []
+  # Loop through the data list
+  for i in range(len(data) - 1):
+    # Check if the current data value and the next data value are on different sides of any level
+    for level in levels:
+      if data[i] < level and data[i + 1] > level:
+        # Append the index and the direction "up" to the list
+        indexes_and_directions.append((i, "up"))
+      elif data[i] > level and data[i + 1] < level:
+        # Append the index and the direction "down" to the list
+        indexes_and_directions.append((i, "down"))
+  # Return the list of indexes and directions
+  return indexes_and_directions
+
+# update_database()
+(Pair('LINKUSDT', 'binance').tf_1h.test_reversion(4,60,10000))
+
+
 
 runtime = time.time()-start_time
 print(f'------ Total Runtime: {(time.time()-start_time)/60:.2f} minutes ------')
 
-# plt.show()
+plt.show()

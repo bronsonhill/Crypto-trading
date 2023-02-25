@@ -208,25 +208,25 @@
     },
     {
         "symbol": "BUSDDAI",
-        "orderId": 14889976,
+        "orderId": 14922789,
         "orderListId": -1,
-        "clientOrderId": "0qx6EtAJh1ueVzob2VFFQj",
-        "price": "1.00000000",
+        "clientOrderId": "oHc3DoDScRIVFtQH7mqHbT",
+        "price": "0.99990000",
         "origQty": "100.00000000",
         "executedQty": "0.00000000",
         "cummulativeQuoteQty": "0.00000000",
         "status": "NEW",
         "timeInForce": "GTC",
         "type": "LIMIT",
-        "side": "SELL",
+        "side": "BUY",
         "stopPrice": "0.00000000",
         "icebergQty": "0.00000000",
-        "time": 1677210949678,
-        "updateTime": 1677210949678,
+        "time": 1677258358362,
+        "updateTime": 1677258358362,
         "isWorking": true,
-        "workingTime": 1677210949678,
+        "workingTime": 1677258358362,
         "origQuoteOrderQty": "0.00000000",
         "selfTradePreventionMode": "NONE",
-        "exitOrder": true
+        "exitOrder": false
     }
 ]
