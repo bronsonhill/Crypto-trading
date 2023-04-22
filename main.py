@@ -10,6 +10,7 @@ import os
 import pytz
 import matplotlib.pyplot as plt
 import mplfinance as mpf
+import csv
 
 start_time = time.time()
 # the days of history available from yfinance
@@ -102,7 +103,7 @@ def update_database(days=7):
             Pair(ticker, 'binance').update_data()
 
     # yahoo data
-    with open('Info/yahoo.json', 'r') as fp:
+    with open('Info/log_yahoo.json', 'r') as fp:
         data = json.load(fp)
 
     for ticker, lst in data.items():
@@ -147,6 +148,7 @@ class Pair:
                 self.tf_30m, self.tf_1h, self.tf_4h, self.tf_1d, self.tf_1w]
             return
     
+
     def update_data(self):
         ''''''
         if self.source == 'yahoo':
@@ -159,13 +161,13 @@ class Pair:
             log_name = 'binance'
 
         # stores date of data retrieval for future reference
-        with open(f'Info/{log_name}_log.json', 'r') as fp:
+        with open(f'Info/log_{log_name}.json', 'r') as fp:
             data = json.load(fp)
             today = datetime.datetime.today().strftime("%Y-%m-%d")
             key_pair = data[str(self.ticker)]
             key_pair[1] = today
             data[str(self.ticker)] = key_pair
-        with open(f'Info/{log_name}_log.json', 'w') as fp:
+        with open(f'Info/log_{log_name}.json', 'w') as fp:
             json.dump(data, fp, indent=4)
 
 
@@ -181,7 +183,7 @@ class Timeframe:
         self.dir = f'../Price_data/{source}/{self.ticker}/{self.interval}.csv'
 
         # intialises ticker name
-        with open(f'Info/ticker_names_{source}.json', 'r') as fp:
+        with open(f'Info/log_{source}.json', 'r') as fp:
             ticker_names = json.load(fp)
             # in the case that it is recorded already
             if ticker in ticker_names:
@@ -279,7 +281,7 @@ Source: {self.source}'
             df = pd.read_csv(dir)
 
             # uses yf datetime format
-            if self.source == 'yf':
+            if self.source == 'yahoo':
                 if self.interval in ['1d', '1wk', '1mo']:
                     format_str = "%Y-%m-%d"
                     recent_date = datetime.datetime.strptime(
@@ -296,12 +298,18 @@ Source: {self.source}'
             
             # uses binance datetime format
             elif self.source == 'binance':
-                if self.interval in ['1d', '1w']:
-                    format_str = "%Y-%m-%d"
-                else:
-                    format_str = "%Y-%m-%d %H:%M:%S"
+                # if self.interval in ['1d', '1w']:
+                #     format_str = "%Y-%m-%d"
+                # else:
+                #     format_str = "%Y-%m-%d %H:%M:%S"
 
-                recent_date = datetime.datetime.strptime(df.iloc[-1,0:1].values[0], format_str)
+                try:
+                    format_str = "%Y-%m-%d %H:%M:%S"
+                    recent_date = datetime.datetime.strptime(df.iloc[-1,0:1].values[0], format_str)
+                except:
+                    format_str = "%Y-%m-%d"
+                    recent_date = datetime.datetime.strptime(df.iloc[-1,0:1].values[0], format_str)
+
                 recent_date = pytz.timezone('UTC').localize(recent_date)
 
                 return datetime.datetime.timestamp(recent_date) * 1000
@@ -746,6 +754,7 @@ Source: {self.source}'
         upper_multiple = 1200
         lower_multiple = 800
         num_orders = 8
+        balance = 1000
 
         # generates a list of the percentage distance from price levels
         open_position_levels_perc = []
@@ -756,31 +765,31 @@ Source: {self.source}'
         open_position_levels_perc.sort(key=lambda x: abs(1-x))
         
         # generates a list of the prices distance from an sma
-        distance_list = []
+        distance_list = [0]
         indexes_and_directions = []
         sma_data = self.sma_data(sma_length_midpoint, data_points).items()
         price_data = self.averaged_price(data_points).values.tolist()
         for i in range(len(price_data)-1):
             sma = next(sma_data)
             open_position_levels = [x*price_data[i][0] for x in open_position_levels_perc]
+            # Check if the current price value and the next price value are on different sides of any level
             for level in open_position_levels:
                 if price_data[i][-1] < level and price_data[i + 1][-1] > level:
-                    # Append the index and the direction "up" to the list
-                    indexes_and_directions.append((i, "up"))
+                    # Append the index, the level and the direction "up" to the list
+                    indexes_and_directions.append((i, level, "up"))
+                    
                 elif price_data[i][-1] > level and price_data[i + 1][-1] < level:
                     # Append the index and the direction "down" to the list
-                    indexes_and_directions.append((i, "down"))
-        
-        print(indexes_and_directions)
+                    indexes_and_directions.append((i, level, "down"))
             
-        '''
-            if price[1][1] > sma[1]:
-                diff = price[1][2] - sma[1]
+            
+            if price_data[i][0] > sma[1]:
+                diff = price_data[i][2] - sma[1]
                 perc_diff = diff/sma[1]
                 distance_list.append(perc_diff)
                 
             else:
-                diff = price[1][3] - sma[1]
+                diff = price_data[i][1] - sma[1]
                 perc_diff = diff/sma[1]
                 distance_list.append(perc_diff)
             
@@ -792,31 +801,21 @@ Source: {self.source}'
         fig, axes = plt.subplots()
         axes.set(xlabel='Datetime', 
                  ylabel=f'% difference from {sma_length_midpoint}SMA', 
-                 title=f'Mean reversion {self.ticker}')
-        plt.plot(price_data.index, distance_list)
+                 title=f'Mean reversion {self.ticker}{self.interval}')
+        x = self.import_from_database(data_points).index
+        plt.plot(x, distance_list)
+        plt.plot(x, [0 for x in range(len(distance_list))])
         # self.ohlc_chart(smas=[60], data_points=data_points)'''
 
+        trades = csv.writer()
         return distance_list
 
-def find_crossing_indexes(data, levels):
-  ''''''
-  # Initialize an empty list to store the indexes and directions
-  indexes_and_directions = []
-  # Loop through the data list
-  for i in range(len(data) - 1):
-    # Check if the current data value and the next data value are on different sides of any level
-    for level in levels:
-      if data[i] < level and data[i + 1] > level:
-        # Append the index and the direction "up" to the list
-        indexes_and_directions.append((i, "up"))
-      elif data[i] > level and data[i + 1] < level:
-        # Append the index and the direction "down" to the list
-        indexes_and_directions.append((i, "down"))
-  # Return the list of indexes and directions
-  return indexes_and_directions
+
 
 # update_database()
-(Pair('LINKUSDT', 'binance').tf_1h.test_reversion(4,60,10000))
+Pair('PL=F', 'binance').tf_1h.hist_chart()
+
+
 
 
 
