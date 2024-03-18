@@ -9,8 +9,8 @@ from time import sleep
 from pushover_complete import PushoverAPI
 
 CLIENT = Client(
-            api_key='FuaLBWg3iJCPTTQrU1yewim305sUVvZwOzO4Xau75JLHP0lTlpK9V7bdbPSBZOwF', 
-            api_secret='b8mt4w5PKu0gIvDoWHWSpGxdj8dWzesQ4RFCufcHf7l1D6LFMwQN2BAzyqN3lcTI'
+            api_key='x', 
+            api_secret='x'
     )
 
 
